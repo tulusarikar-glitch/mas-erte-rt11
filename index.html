@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mas eRTe · Dukuh Tulusari RT 11</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{ --bg:#EEF1E7; --surface:#FFFFFF; --ink:#20261D; --sub:#5B6353; --green:#1F4D3A; --gold:#B98A2E; --line:#DCE1D2; }
+@media (prefers-color-scheme: dark){ :root{ --bg:#121A15; --surface:#1B241D; --ink:#EAEDE4; --sub:#9BA694; --green:#4C8A6B; --gold:#D6AE5C; --line:#2B362B; } }
+*{box-sizing:border-box;}
+body{ margin:0; min-height:100dvh; background:var(--bg); color:var(--ink); font-family:'Inter',system-ui,sans-serif; display:flex; justify-content:center; align-items:center; padding:24px; }
+.wrap{ width:100%; max-width:420px; }
+h1{ font-family:'Fraunces',serif; font-weight:700; font-size:26px; margin:0 0 4px; color:var(--green); }
+p.sub{ font-size:13px; color:var(--sub); margin:0 0 28px; }
+a.card{ display:block; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px 20px; margin-bottom:14px; text-decoration:none; color:var(--ink); }
+a.card .name{ font-family:'Fraunces',serif; font-weight:600; font-size:17px; }
+a.card .desc{ font-size:12.5px; color:var(--sub); margin-top:4px; line-height:1.5; }
+a.card.gold .name{ color:var(--gold); }
+a.card.green .name{ color:var(--green); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Mas eRTe</h1>
+  <p class="sub">Dukuh Tulusari · RT 11 · Karangwaru, Plupuh</p>
+  <a class="card green" href="app.html">
+    <div class="name">Mas eRTe Mobile →</div>
+    <div class="desc">Untuk Ketua RT, Sekretaris, Bendahara RT, dan Warga. Data warga, kas RT, surat, pengumuman, pengaduan.</div>
+  </a>
+  <a class="card gold" href="jimpitan.html">
+    <div class="name">Jimpitan Squad →</div>
+    <div class="desc">Untuk Karang Taruna (Ketua, Bendahara, Petugas Jimpitan). Scan QR jimpitan & Kas Jimpitan.</div>
+  </a>
+</div>
+</body>
+</html>

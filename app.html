@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mas eRTe Mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1E7; --surface:#FFFFFF; --ink:#20261D; --sub:#5B6353;
+  --green:#1F4D3A; --green-light:#3E7A5C; --gold:#B98A2E; --brick:#A24B3E;
+  --line:#DCE1D2; --nav-bg:#FFFFFF;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121A15; --surface:#1B241D; --ink:#EAEDE4; --sub:#9BA694;
+    --green:#4C8A6B; --green-light:#6BAE8B; --gold:#D6AE5C; --brick:#C97A6A;
+    --line:#2B362B; --nav-bg:#1B241D;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121A15; --surface:#1B241D; --ink:#EAEDE4; --sub:#9BA694;
+  --green:#4C8A6B; --green-light:#6BAE8B; --gold:#D6AE5C; --brick:#C97A6A;
+  --line:#2B362B; --nav-bg:#1B241D;
+}
+*{box-sizing:border-box;}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+body{
+  margin:0; min-height:100dvh; background:var(--bg); color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif; display:flex; justify-content:center;
+  padding:24px 12px;
+}
+.phone{
+  width:100%; max-width:420px; background:var(--surface); min-height:calc(100dvh - 48px);
+  border-radius:28px; overflow:hidden; display:flex; flex-direction:column;
+  box-shadow:0 20px 50px rgba(20,30,20,.18); border:1px solid var(--line);
+}
+header{ background:var(--green); color:#fff; padding:20px 20px 16px; position:sticky; top:0; z-index:5; }
+header .brand{font-family:'Fraunces',serif; font-weight:600; font-size:20px; letter-spacing:.2px;}
+header .place{font-size:12.5px; opacity:.85; margin-top:2px;}
+header .who{display:flex; align-items:center; justify-content:space-between; margin-top:12px; gap:10px;}
+header .who .name{font-size:13px; font-weight:600;}
+header .who .role{font-size:11px; opacity:.85;}
+header .logout{background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.3); color:#fff; font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:8px; cursor:pointer; font-family:inherit;}
+main{flex:1; overflow-y:auto; padding:18px 16px 90px;}
+h2.title{font-family:'Fraunces',serif; font-weight:600; font-size:19px; margin:2px 0 14px; color:var(--ink);}
+.card{ background:var(--bg); border:1px solid var(--line); border-radius:16px; padding:14px 16px; margin-bottom:12px; }
+.card + .card{margin-top:10px;}
+.row{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+.label{font-size:12.5px; color:var(--sub);}
+.value-lg{font-family:'Fraunces',serif; font-size:26px; font-weight:600; margin-top:2px;}
+.stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+.stat{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px;}
+.stat .n{font-family:'Fraunces',serif; font-size:22px; font-weight:600;}
+.stat .l{font-size:12px; color:var(--sub); margin-top:2px;}
+.item{padding:11px 0; border-bottom:1px solid var(--line);}
+.item:last-child{border-bottom:none;}
+.item-title{font-weight:600; font-size:14.5px;}
+.item-sub{font-size:12.5px; color:var(--sub); margin-top:2px; line-height:1.5;}
+.badge{display:inline-block; font-size:11px; padding:3px 9px; border-radius:99px; font-weight:600;}
+.badge.ok{background:#DCEBE0; color:var(--green);}
+.badge.wait{background:#F3E6C9; color:#8A6417;}
+.badge.due{background:#F3DCD8; color:var(--brick);}
+@media (prefers-color-scheme: dark){
+  .badge.ok{background:#1E3A2A;} .badge.wait{background:#3B3116;} .badge.due{background:#3C2521;}
+}
+.btn{ display:inline-block; background:var(--green); color:#fff; border:none; padding:10px 16px; border-radius:11px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; }
+.btn.outline{background:transparent; color:var(--green); border:1px solid var(--green);}
+.btn.gold{background:var(--gold);}
+.btn.brick{background:var(--brick);}
+.btn.block{width:100%; text-align:center;}
+.btn.sm{padding:6px 10px; font-size:12px; border-radius:8px;}
+.btn:disabled{opacity:.6; cursor:default;}
+.btn-row{display:flex; gap:8px; margin-top:10px;}
+.list-link{ display:flex; justify-content:space-between; align-items:center; padding:14px 4px; border-bottom:1px solid var(--line); cursor:pointer; background:none; border-left:none; border-right:none; border-top:none; width:100%; text-align:left; font-family:inherit; color:var(--ink); }
+.list-link:last-child{border-bottom:none;}
+.list-link .ico{font-size:19px; margin-right:12px;}
+.list-link .txt{flex:1;}
+.list-link .name{font-weight:600; font-size:14.5px;}
+.list-link .desc{font-size:12px; color:var(--sub); margin-top:1px;}
+.list-link .chev{color:var(--sub); font-size:16px;}
+.back{ background:none; border:none; color:var(--ink); font-size:14px; font-weight:600; cursor:pointer; padding:0 0 14px; display:flex; align-items:center; gap:6px; font-family:inherit; }
+.section-tag{font-size:11.5px; color:var(--green-light); font-weight:700; margin-bottom:4px;}
+nav{ position:sticky; bottom:0; background:var(--nav-bg); border-top:1px solid var(--line); display:flex; padding:8px 4px calc(8px + env(safe-area-inset-bottom,0px)); }
+nav button{ flex:1; background:none; border:none; font-family:inherit; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; color:var(--sub); font-size:11px; font-weight:600; }
+nav button.active{color:var(--green);}
+nav button .ic{font-size:19px;}
+.empty{text-align:center; padding:30px 10px; color:var(--sub); font-size:13.5px;}
+.locked{opacity:.55;}
+.scan-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.scan-btn{background:var(--green-light); color:#fff; border:none; border-radius:9px; padding:7px 12px; font-size:12px; font-weight:600; font-family:inherit; cursor:pointer;}
+.geo{font-size:11px; color:var(--sub); margin-top:2px;}
+/* form & login */
+.field{margin-bottom:12px;}
+.field label{display:block; font-size:12px; font-weight:600; color:var(--sub); margin-bottom:4px;}
+.field label .opt{font-weight:400; font-style:italic; color:var(--sub);}
+.field input, .field select{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-family:inherit; font-size:13.5px; }
+.field input:focus, .field select:focus{outline:2px solid var(--green-light);}
+.err{background:#F3DCD8; color:var(--brick); border-radius:10px; padding:10px 12px; font-size:12.5px; margin-bottom:12px; font-weight:600;}
+.msg-ok{background:#DCEBE0; color:var(--green); border-radius:10px; padding:10px 12px; font-size:12.5px; margin-bottom:12px; font-weight:600;}
+.login-wrap{min-height:calc(100dvh - 48px); display:flex; flex-direction:column; justify-content:center; padding:28px 26px;}
+.login-brand{font-family:'Fraunces',serif; font-weight:700; font-size:26px; color:var(--green); margin-bottom:2px;}
+.login-place{font-size:12.5px; color:var(--sub); margin-bottom:22px;}
+.tabs2{display:flex; gap:6px; margin-bottom:18px; background:var(--bg); padding:4px; border-radius:12px;}
+.tabs2 button{flex:1; padding:8px; border-radius:9px; border:none; background:none; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--sub); cursor:pointer;}
+.tabs2 button.active{background:var(--surface); color:var(--green); box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.mask-note{font-size:11px; color:var(--sub); margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="phone" id="phone"></div>
+
+<script>
+/* ====================== KONFIGURASI ====================== */
+const API_URL = "https://script.google.com/macros/s/AKfycbwp520IuPJE_K9XwIueQpw4w5756FWGEsdxqRubYIoAAR5NudNqX9zieLOmLzYHyD7IUg/exec";
+const API_KEY = "gampangwae"; // harus SAMA dengan API_KEY di Code.gs
+
+/* ====================== HELPER API ====================== */
+async function apiGet(action, params) {
+  const aktor = (session && session.username) || "";
+  const q = new URLSearchParams(Object.assign({ action, apiKey: API_KEY, aktor }, params || {}));
+  const res = await fetch(API_URL + "?" + q.toString());
+  return res.json();
+}
+async function apiPost(action, body) {
+  const aktor = (session && session.username) || "";
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(Object.assign({ action, apiKey: API_KEY, aktor }, body || {}))
+  });
+  return res.json();
+}
+const rupiah = n => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
+function fmtTanggal(v) {
+  if (!v) return "-";
+  const d = new Date(v);
+  if (isNaN(d)) return String(v);
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
+const badge = s => s === "ok" ? '<span class="badge ok">Lunas / Selesai</span>'
+                 : s === "wait" ? '<span class="badge wait">Diproses</span>'
+                 : '<span class="badge due">Belum Bayar</span>';
+function maskNik(nik) {
+  nik = String(nik || "");
+  if (nik.length < 8) return "****";
+  return nik.slice(0, 4) + "xx****xx" + nik.slice(-2);
+}
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+/* ====================== SESI ====================== */
+let session = null;
+try { const raw = localStorage.getItem("masrte_session"); if (raw) session = JSON.parse(raw); } catch (e) {}
+function saveSession(s) { session = s; try { localStorage.setItem("masrte_session", JSON.stringify(s)); } catch (e) {} }
+function clearSession() { session = null; try { localStorage.removeItem("masrte_session"); } catch (e) {} }
+
+const can = {
+  editWarga: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
+  seeFullNik: (no_kk) => session && (session.peran === "ketua" || session.peran === "sekretaris" || (session.peran === "warga" && session.no_kk === no_kk)),
+  editKasRT: () => session && (session.peran === "ketua" || session.peran === "bendahara"),
+  editKasJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_bendahara"),
+  editKasGerabah: () => session && (session.peran === "ketua" || session.peran === "bendahara"),
+  manageUsers: () => session && session.peran === "admin",
+  scanJimpitan: () => session && (session.peran === "kt_petugas" || session.peran === "kt_ketua"),
+  isAdmin: () => session && session.peran === "admin",
+  isWarga: () => session && session.peran === "warga",
+  managePengumuman: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
+  processSurat: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
+  finalizeSurat: () => session && session.peran === "ketua",
+  processPengaduan: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
+  manageKT: () => session && (session.peran === "ketua" || session.peran === "kt_ketua"),
+  viewKasJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_bendahara"),
+  manageKontak: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
+  manageIuranRT: () => session && (session.peran === "ketua" || session.peran === "bendahara"),
+  hapusPertemuanRT: () => session && session.peran === "ketua",
+  inputJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_petugas"),
+  postJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_bendahara"),
+  manageInventaris: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
+};
+// alias supaya kode lama yang memanggil can.editKas() tetap berfungsi (Kas RT)
+can.editKas = can.editKasRT;
+const ROLE_LABEL = { ketua: "Ketua RT", sekretaris: "Sekretaris RT", bendahara: "Bendahara RT",
+  kt_ketua: "Ketua Karang Taruna", kt_bendahara: "Bendahara Karang Taruna", kt_petugas: "Petugas Jimpitan",
+  admin: "Admin", warga: "Warga" };
+
+/* ====================== DATA TETAP (belum ada di struktur Sheet spesifikasi) ====================== */
+const STATIS = {
+  surat_jenis:["Surat Pengantar KTP/KK","Surat Keterangan Domisili","Surat Keterangan Tidak Mampu","Surat Pengantar Nikah","Surat Keterangan Kematian"],
+};
+function statusBadge(s) {
+  s = String(s || "").toLowerCase();
+  if (s === "selesai" || s === "lunas") return '<span class="badge ok">' + esc(s.charAt(0).toUpperCase()+s.slice(1)) + '</span>';
+  if (s === "diproses") return '<span class="badge wait">Diproses</span>';
+  return '<span class="badge due">' + esc(s || "Diajukan") + '</span>';
+}
+function waLink(text) { return "https://wa.me/?text=" + encodeURIComponent(text); }
+
+/* ====================== STATE APLIKASI ====================== */
+let currentTab = "beranda";
+let cache = {
+  kk: [], kas: { mutasi: [], saldo: 0 }, totalKK: 0, totalJiwa: 0, users: [],
+  pengumuman: [], surat: [], pengaduan: [], kt: [], kontak: [],
+  kasJimpitan: { mutasi: [], saldo: 0 }, kasGerabah: { mutasi: [], saldo: 0 },
+  pertemuan: [], iuran: [], rumah: [], jimpitanLog: [], jimpitanTotalBelum: 0,
+  tunggakan: [], tunggakanTotal: 0, inventaris: []
+};
+let loginMode = "pengurus";
+let formError = "";
+let kkRowSeq = 0;
+
+function render() {
+  const el = document.getElementById("phone");
+  el.innerHTML = session ? appShell() : loginScreen();
+  attachEvents();
+}
+
+/* ====================== LOGIN ====================== */
+function loginScreen() {
+  return `
+    <div class="login-wrap">
+      <div class="login-brand">Mas eRTe Mobile</div>
+      <div class="login-place">Dukuh Tulusari · RT 11 · Karangwaru, Plupuh</div>
+      <div class="tabs2">
+        <button data-mode="pengurus" class="${loginMode==='pengurus'?'active':''}">Pengurus &amp; Petugas</button>
+        <button data-mode="warga" class="${loginMode==='warga'?'active':''}">Warga</button>
+      </div>
+      ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+      ${loginMode === "pengurus" ? `
+        <div class="field"><label>Username</label><input id="fUsername" autocomplete="username"></div>
+        <div class="field"><label>Password</label><input id="fPassword" type="password" autocomplete="current-password"></div>
+        <button class="btn block" id="btnLoginPengurus">Masuk</button>
+      ` : `
+        <div class="field"><label>Nama lengkap (sesuai Data Warga)</label><input id="fNama"></div>
+        <div class="field"><label>NIK</label><input id="fNik" inputmode="numeric"></div>
+        <button class="btn gold block" id="btnLoginWarga">Masuk sebagai Warga</button>
+      `}
+    </div>`;
+}
+
+/* ====================== SHELL SETELAH LOGIN ====================== */
+function appShell() {
+  const header = `
+    <header>
+      <div class="brand">Mas eRTe Mobile</div>
+      <div class="place">Dukuh Tulusari · RT 11 · Karangwaru, Plupuh</div>
+      <div class="who">
+        <div><div class="name">${esc(session.nama)}</div><div class="role">${esc(ROLE_LABEL[session.peran] || session.peran)}</div></div>
+        <button class="logout" id="btnLogout">Keluar</button>
+      </div>
+    </header>`;
+  if (can.isAdmin()) {
+    // Sesuai spesifikasi: Admin hanya mengelola akun, tidak melihat modul data lain.
+    return `${header}
+      <main id="screen">Memuat…</main>
+      <nav id="navbar">
+        <button data-tab="akun" class="active"><span class="ic">🔐</span>Kelola Akun</button>
+      </nav>`;
+  }
+  return `${header}
+    <main id="screen">Memuat…</main>
+    <nav id="navbar">
+      <button data-tab="beranda" class="${currentTab==='beranda'?'active':''}"><span class="ic">🏠</span>Beranda</button>
+      <button data-tab="warga" class="${currentTab==='warga'?'active':''}"><span class="ic">👪</span>Warga</button>
+      <button data-tab="kas" class="${currentTab==='kas'?'active':''}"><span class="ic">💰</span>Kas</button>
+      <button data-tab="info" class="${currentTab==='info'?'active':''}"><span class="ic">📣</span>Info</button>
+      <button data-tab="lainnya" class="${['lainnya','surat','pengaduan','kt','kontak','jimpitan','akun','iuranrt','iuranrtDetail','tunggakan','inventaris'].includes(currentTab)?'active':''}"><span class="ic">☰</span>Lainnya</button>
+    </nav>`;
+}
+
+function setScreen(html) { const s = document.getElementById("screen"); if (s) s.innerHTML = html; }
+
+/* ====================== NAVIGASI ====================== */
+async function goTab(tab) {
+  currentTab = tab;
+  render();
+  await loadAndShow(tab);
+}
+async function loadAndShow(tab) {
+  setScreen('<div class="empty">Memuat…</div>');
+  try {
+    if (tab === "beranda") { await Promise.all([refreshBeranda(), refreshInfo()]); setScreen(screens.beranda()); }
+    else if (tab === "warga") { await refreshWarga(); setScreen(screens.warga()); }
+    else if (tab === "kas") { await refreshKas(); setScreen(screens.kas()); }
+    else if (tab === "info") { await refreshInfo(); setScreen(screens.info()); }
+    else if (tab === "lainnya") setScreen(screens.lainnya());
+    else if (tab === "akun") { await refreshUsers(); setScreen(screens.akun()); }
+    else if (tab === "surat") { await refreshSurat(); setScreen(screens.surat()); }
+    else if (tab === "pengaduan") { await refreshPengaduan(); setScreen(screens.pengaduan()); }
+    else if (tab === "kt") { await refreshKT(); setScreen(screens.kt()); }
+    else if (tab === "kontak") { await refreshKontak(); setScreen(screens.kontak()); }
+    else if (tab === "iuranrt") { await refreshPertemuanRT(); setScreen(screens.iuranrt()); }
+    else if (tab === "jimpitan") { await refreshJimpitanLog(); setScreen(screens.jimpitan()); }
+    else if (tab === "tunggakan") { await refreshTunggakanRT(); setScreen(screens.tunggakan()); }
+    else if (tab === "inventaris") { await refreshInventaris(); setScreen(screens.inventaris()); }
+    else if (screens[tab]) setScreen(screens[tab]());
+  } catch (err) {
+    setScreen(`<div class="err">Gagal memuat data: ${esc(err.message)}</div>`);
+  }
+  attachEvents();
+}
+async function refreshBeranda() {
+  const [w, k] = await Promise.all([apiGet("getWargaKK"), apiGet("getKas", { jenis_kas: "rt" })]);
+  if (w.ok) { cache.totalKK = w.total_kk; cache.totalJiwa = w.total_jiwa; }
+  if (k.ok) { cache.kas = k; }
+}
+async function refreshWarga() {
+  const w = await apiGet("getWargaKK");
+  if (!w.ok) throw new Error(w.error);
+  cache.kk = w.kk; cache.totalKK = w.total_kk; cache.totalJiwa = w.total_jiwa;
+}
+async function refreshKas() {
+  const jobs = [apiGet("getKas", { jenis_kas: "rt" }), apiGet("getKas", { jenis_kas: "gerabah" })];
+  const [rt, gerabah] = await Promise.all(jobs);
+  if (!rt.ok) throw new Error(rt.error);
+  cache.kas = rt;
+  if (gerabah.ok) cache.kasGerabah = gerabah;
+  if (can.viewKasJimpitan()) {
+    const j = await apiGet("getKas", { jenis_kas: "jimpitan" });
+    if (j.ok) cache.kasJimpitan = j;
+  }
+}
+async function refreshUsers() {
+  const u = await apiGet("getUsers");
+  if (!u.ok) throw new Error(u.error);
+  cache.users = u.users;
+}
+async function refreshInfo() {
+  const r = await apiGet("getPengumuman");
+  if (r.ok) cache.pengumuman = r.pengumuman;
+}
+async function refreshSurat() {
+  const params = can.isWarga() ? { nik: session.nik } : {};
+  const r = await apiGet("getSurat", params);
+  if (!r.ok) throw new Error(r.error);
+  cache.surat = r.surat;
+}
+async function refreshPengaduan() {
+  const params = can.isWarga() ? { nik: session.nik } : {};
+  const r = await apiGet("getPengaduan", params);
+  if (!r.ok) throw new Error(r.error);
+  cache.pengaduan = r.pengaduan;
+}
+async function refreshKT() {
+  const r = await apiGet("getKarangTaruna");
+  if (!r.ok) throw new Error(r.error);
+  cache.kt = r.anggota;
+}
+async function refreshKontak() {
+  const r = await apiGet("getKontak");
+  if (!r.ok) throw new Error(r.error);
+  cache.kontak = r.kontak;
+}
+async function refreshPertemuanRT() {
+  const r = await apiGet("getPertemuanRT");
+  if (!r.ok) throw new Error(r.error);
+  cache.pertemuan = r.pertemuan;
+}
+async function refreshIuranRT(pertemuan_id) {
+  const r = await apiGet("getIuranRT", { pertemuan_id });
+  if (!r.ok) throw new Error(r.error);
+  cache.iuran = r.iuran;
+}
+async function refreshTunggakanRT() {
+  const r = await apiGet("getTunggakanRT");
+  if (!r.ok) throw new Error(r.error);
+  cache.tunggakan = r.tunggakan; cache.tunggakanTotal = r.grand_total;
+}
+async function refreshInventaris() {
+  const r = await apiGet("getInventaris");
+  if (!r.ok) throw new Error(r.error);
+  cache.inventaris = r.inventaris;
+}
+async function refreshRumah() {
+  const r = await apiGet("getRumah");
+  if (r.ok) cache.rumah = r.rumah;
+}
+async function refreshJimpitanLog() {
+  const jobs = [apiGet("getJimpitanLog"), refreshRumah()];
+  const [r] = await Promise.all(jobs);
+  if (!r.ok) throw new Error(r.error);
+  cache.jimpitanLog = r.log; cache.jimpitanTotalBelum = r.total_belum_posting;
+}
+
+/* ====================== LAYAR ====================== */
+function kasLedgerBlock(l) {
+  const editable = l.editable, data = l.data, jenisKas = l.jenisKas, title = l.title;
+  return `
+    <h2 class="title" style="margin-top:20px; font-size:16px">${esc(title)}</h2>
+    <div class="card">
+      <div class="label">Saldo ${esc(title)}</div>
+      <div class="value-lg">${rupiah(data.saldo)}</div>
+      ${editable ? '' : '<div class="geo">Tampilan lihat-saja untuk peran Anda.</div>'}
+    </div>
+    ${editable ? `<button class="btn gold block" data-tambah-mutasi="${jenisKas}">+ Catat mutasi ${esc(title)}</button>` : ''}
+    <div class="card" style="margin-top:10px">
+      ${data.mutasi.length ? data.mutasi.map(m=>`
+        <div class="item">
+          <div class="row">
+            <div><div class="item-title">${esc(m.keterangan)}</div><div class="item-sub">${fmtTanggal(m.tanggal)} · dicatat oleh ${esc(m.dicatat_oleh||'-')}</div></div>
+            <div style="text-align:right; color:${String(m.jenis).toLowerCase()==='masuk'?'var(--green)':'var(--brick)'}; font-weight:700; font-size:13.5px; white-space:nowrap">
+              ${String(m.jenis).toLowerCase()==='masuk'?'+':'-'} ${rupiah(m.jumlah)}</div>
+          </div>
+          ${editable ? `<div class="btn-row"><button class="btn outline sm" data-edit-mutasi="${esc(m.id)}" data-jenis-kas="${jenisKas}">Ubah</button><button class="btn brick sm" data-del-mutasi="${esc(m.id)}" data-jenis-kas="${jenisKas}">Hapus</button></div>` : ""}
+        </div>`).join("") : `<div class="empty">Belum ada mutasi ${esc(title)}.</div>`}
+    </div>`;
+}
+const screens = {
+  beranda(){
+    return `
+      <div class="section-tag">RINGKASAN DUKUH</div>
+      <h2 class="title">Selamat datang, ${esc(session.nama)}</h2>
+      <div class="stat-grid">
+        <div class="stat"><div class="n">${cache.totalKK}</div><div class="l">Kepala Keluarga</div></div>
+        <div class="stat"><div class="n">${cache.totalJiwa}</div><div class="l">Jiwa terdata</div></div>
+      </div>
+      <div class="card">
+        <div class="label">Saldo Kas RT saat ini</div>
+        <div class="value-lg">${rupiah(cache.kas.saldo)}</div>
+      </div>
+      <h2 class="title" style="margin-top:20px">Pengumuman terbaru</h2>
+      <div class="card">
+        ${cache.pengumuman.length ? cache.pengumuman.slice(0,2).map(p=>`<div class="item"><div class="item-title">${esc(p.judul)}</div><div class="item-sub">${fmtTanggal(p.tanggal)}${p.tempat?(' · '+esc(p.tempat)):''}</div></div>`).join("") : '<div class="empty">Belum ada pengumuman.</div>'}
+      </div>`;
+  },
+
+  warga(){
+    if (!cache.kk.length) return `<div class="section-tag">DATA KEPENDUDUKAN</div><h2 class="title">Data Warga</h2><div class="empty">Belum ada KK terdata.</div>${can.editWarga() ? '<button class="btn outline block" id="btnTambahKK">+ Tambah KK baru</button>' : ''}`;
+    return `
+      <div class="section-tag">DATA KEPENDUDUKAN</div>
+      <h2 class="title">Data Warga</h2>
+      <div class="card" style="padding:4px 12px">
+        ${cache.kk.map(k=>`
+          <button class="list-link" data-open-kk="${esc(k.no_kk)}">
+            <span class="txt"><div class="name">${esc(k.kepala)}</div>
+            <div class="desc">No. KK ${esc(can.seeFullNik(k.no_kk) ? k.no_kk : maskNik(k.no_kk))} · Blok ${esc(k.blok||'-')} · ${k.jiwa} jiwa</div></span>
+            <span class="chev">›</span>
+          </button>`).join("")}
+      </div>
+      ${can.editWarga() ? '<button class="btn outline block" id="btnTambahKK">+ Tambah KK baru</button>' : '<div class="empty">Hubungi Sekretaris/Ketua RT untuk menambah data.</div>'}`;
+  },
+
+  kkDetail(no_kk){
+    return `
+      <button class="back" data-back-tab="warga">‹ Kembali</button>
+      <h2 class="title">KK ${esc(can.seeFullNik(no_kk) ? no_kk : maskNik(no_kk))}</h2>
+      <div id="kkAnggotaWrap" class="card"><div class="empty">Memuat anggota…</div></div>
+      ${can.editWarga() ? `
+      <div class="btn-row">
+        <button class="btn outline block" data-add-anggota="${esc(no_kk)}">+ Tambah anggota</button>
+        <button class="btn brick block" data-del-kk="${esc(no_kk)}">Hapus KK ini</button>
+      </div>` : ""}`;
+  },
+
+  kas(){
+    const ledgers = [
+      { jenisKas: "rt", title: "Kas RT", data: cache.kas, editable: can.editKasRT(), show: true },
+      { jenisKas: "jimpitan", title: "Kas Jimpitan", data: cache.kasJimpitan, editable: can.editKasJimpitan(), show: can.viewKasJimpitan() },
+      { jenisKas: "gerabah", title: "Kas Gerabah", data: cache.kasGerabah, editable: can.editKasGerabah(), show: true },
+    ];
+    return `
+      <div class="section-tag">KEUANGAN RT</div>
+      <h2 class="title">Kas &amp; Iuran</h2>
+      <div class="mask-note" style="margin-top:-4px">Tiga kas dicatat terpisah: Kas RT (iuran &amp; kegiatan umum), Kas Jimpitan (Karang Taruna), dan Kas Gerabah (sewa perlengkapan hajatan). Saldo &amp; mutasi masing-masing tidak tercampur.</div>
+      ${ledgers.filter(l => l.show).map(l => kasLedgerBlock(l)).join("")}
+      <div class="mask-note">Rekap Iuran RT per pertemuan & pencatatan Jimpitan per rumah kini ada di menu Lainnya.</div>`;
+  },
+
+  info(){
+    const editable = can.managePengumuman();
+    return `
+      <div class="section-tag">PENGUMUMAN &amp; JADWAL</div>
+      <h2 class="title">Info Dukuh</h2>
+      ${editable ? '<button class="btn gold block" id="btnTambahPengumuman">+ Buat pengumuman</button>' : ''}
+      <div class="card" style="margin-top:${editable?'12px':'0'}">
+        ${cache.pengumuman.length ? cache.pengumuman.map(p=>`
+          <div class="item">
+            <div class="item-title">${esc(p.judul)}</div>
+            <div class="item-sub">${fmtTanggal(p.tanggal)}${p.tempat?(' · '+esc(p.tempat)):''}</div>
+            ${p.isi ? `<div class="item-sub" style="margin-top:4px">${esc(p.isi)}</div>` : ''}
+            <div class="btn-row">
+              <a class="btn sm" style="background:#25D366" target="_blank" rel="noopener" href="${waLink((p.judul||'')+'\n'+(p.tanggal||'')+(p.tempat?(' · '+p.tempat):'')+(p.isi?('\n'+p.isi):''))}">Bagikan ke WhatsApp</a>
+              ${editable ? `<button class="btn outline sm" data-edit-pengumuman="${esc(p.id)}">Ubah</button><button class="btn brick sm" data-del-pengumuman="${esc(p.id)}">Hapus</button>` : ''}
+            </div>
+          </div>`).join("") : '<div class="empty">Belum ada pengumuman.</div>'}
+      </div>`;
+  },
+
+  lainnya(){
+    const items = [
+      ...(can.isWarga() || can.processSurat() ? [["📄","Surat-menyurat","Ajukan & pantau surat pengantar","surat"]] : []),
+      ...(can.isWarga() || can.processPengaduan() ? [["📢","Pengaduan Warga","Laporkan keluhan di lingkungan","pengaduan"]] : []),
+      ["🤝","Karang Taruna","Info & kegiatan pemuda dukuh","kt"],
+      ...(can.manageIuranRT() ? [["🧾","Iuran RT","Rekap iuran per pertemuan Minggu Pahingan","iuranrt"]] : []),
+      ...(can.inputJimpitan() || can.postJimpitan() ? [["📷","Jimpitan","Catat & posting jimpitan per rumah","jimpitan"]] : []),
+      ["📦","Inventaris & Aset","Daftar barang RT & kondisinya","inventaris"],
+      ["📇","Kontak Penting","Pengurus RT & layanan darurat","kontak"],
+    ];
+    return `
+      <div class="section-tag">MENU LAINNYA</div>
+      <h2 class="title">Layanan Lain</h2>
+      <div class="card" style="padding:4px 12px">
+        ${items.map(([ic,name,desc,go])=>`
+          <button class="list-link" data-open-sub="${go}">
+            <span class="ico">${ic}</span>
+            <span class="txt"><div class="name">${esc(name)}</div><div class="desc">${esc(desc)}</div></span>
+            <span class="chev">›</span>
+          </button>`).join("")}
+      </div>`;
+  },
+
+  akun(){
+    return `
+      <button class="back" data-back-tab="lainnya">‹ Kembali</button>
+      <h2 class="title">Kelola Akun</h2>
+      <button class="btn gold block" id="btnTambahAkun">+ Buat akun baru</button>
+      <div class="card" style="margin-top:14px">
+        ${cache.users.length ? cache.users.map(u=>`
+          <div class="item">
+            <div class="row"><div><div class="item-title">${esc(u.nama)}</div><div class="item-sub">@${esc(u.username)} · ${esc(ROLE_LABEL[u.peran]||u.peran)}</div></div>
+            ${String(u.status_aktif).toLowerCase()==='nonaktif' ? '<span class="badge due">Nonaktif</span>' : '<span class="badge ok">Aktif</span>'}</div>
+            <div class="btn-row">
+              <button class="btn outline sm" data-reset-pw="${esc(u.username)}">Reset password</button>
+              <button class="btn outline sm" data-toggle-user="${esc(u.username)}" data-status="${esc(u.status_aktif||'aktif')}">${String(u.status_aktif).toLowerCase()==='nonaktif' ? 'Aktifkan' : 'Nonaktifkan'}</button>
+              <button class="btn brick sm" data-del-user="${esc(u.username)}">Hapus</button>
+            </div>
+          </div>`).join("") : '<div class="empty">Belum ada akun pengurus.</div>'}
+      </div>`;
+  },
+
+  surat(){
+    const proses = can.processSurat();
+    let body = "";
+    if (can.isWarga()) {
+      body += `
+        <h2 class="title" style="font-size:15px">Ajukan surat baru</h2>
+        <div class="card" style="padding:4px 12px">
+          ${STATIS.surat_jenis.map(s=>`<button class="list-link" data-ajukan-surat="${esc(s)}"><span class="txt"><div class="name">${esc(s)}</div></span><span class="chev">›</span></button>`).join("")}
+        </div>
+        <h2 class="title" style="margin-top:18px; font-size:15px">Riwayat pengajuan saya</h2>
+        <div class="card">
+          ${cache.surat.length ? cache.surat.map(s=>`
+            <div class="item">
+              <div class="row"><span class="item-title">${esc(s.jenis_surat)}</span>${statusBadge(s.status)}</div>
+              <div class="item-sub">${esc(s.keperluan)}${s.nomor_surat?(' · No. '+esc(s.nomor_surat)):''}</div>
+            </div>`).join("") : '<div class="empty">Belum pernah mengajukan surat.</div>'}
+        </div>`;
+    }
+    if (proses) {
+      body += `
+        <h2 class="title" style="font-size:15px; margin-top:${can.isWarga()?'18px':'0'}">Semua pengajuan surat</h2>
+        <div class="card">
+          ${cache.surat.length ? cache.surat.map(s=>`
+            <div class="item">
+              <div class="row"><span class="item-title">${esc(s.jenis_surat)}</span>${statusBadge(s.status)}</div>
+              <div class="item-sub">${esc(s.nama_pemohon)} · NIK ${esc(maskNik(s.nik_pemohon))}</div>
+              <div class="item-sub">${esc(s.keperluan)}</div>
+              ${s.nomor_surat ? `<div class="item-sub">No. surat: ${esc(s.nomor_surat)}</div>` : ""}
+              <div class="btn-row">
+                ${String(s.status).toLowerCase()!=='diproses' && String(s.status).toLowerCase()!=='selesai' ? `<button class="btn outline sm" data-proses-surat="${esc(s.id)}">Tandai Diproses</button>` : ""}
+                ${can.finalizeSurat() && String(s.status).toLowerCase()!=='selesai' ? `<button class="btn gold sm" data-terbit-surat="${esc(s.id)}">Terbitkan &amp; beri nomor</button>` : ""}
+                ${s.nomor_surat ? `<button class="btn outline sm" data-cetak-surat="${esc(s.id)}">Cetak</button>` : ""}
+                <button class="btn brick sm" data-del-surat="${esc(s.id)}">Hapus</button>
+              </div>
+            </div>`).join("") : '<div class="empty">Belum ada pengajuan surat.</div>'}
+        </div>`;
+    }
+    if (!body) body = '<div class="empty">Tidak ada akses untuk modul ini.</div>';
+    return `<button class="back" data-back-tab="lainnya">‹ Kembali</button><h2 class="title">Surat-menyurat</h2>${body}`;
+  },
+  pengaduan(){
+    const proses = can.processPengaduan();
+    let body = "";
+    if (can.isWarga()) {
+      body += `
+        <button class="btn gold block" id="btnBuatPengaduan">+ Buat pengaduan baru</button>
+        <h2 class="title" style="margin-top:16px; font-size:15px">Pengaduan saya</h2>
+        <div class="card">
+          ${cache.pengaduan.length ? cache.pengaduan.map(p=>`
+            <div class="item"><div class="row"><span class="item-title">${esc(p.judul)}</span>${statusBadge(p.status)}</div><div class="item-sub">${esc(p.deskripsi)}</div></div>`).join("") : '<div class="empty">Belum pernah membuat pengaduan.</div>'}
+        </div>`;
+    }
+    if (proses) {
+      body += `
+        <h2 class="title" style="font-size:15px; margin-top:${can.isWarga()?'18px':'0'}">Semua pengaduan warga</h2>
+        <div class="card">
+          ${cache.pengaduan.length ? cache.pengaduan.map(p=>`
+            <div class="item">
+              <div class="row"><span class="item-title">${esc(p.judul)}</span>${statusBadge(p.status)}</div>
+              <div class="item-sub">${esc(p.pelapor||'-')} · ${esc(p.deskripsi)}</div>
+              <div class="btn-row">
+                ${String(p.status).toLowerCase()!=='selesai' ? `<button class="btn outline sm" data-selesai-pengaduan="${esc(p.id)}">Tandai Selesai</button>` : ""}
+                <button class="btn brick sm" data-del-pengaduan="${esc(p.id)}">Hapus</button>
+              </div>
+            </div>`).join("") : '<div class="empty">Belum ada pengaduan.</div>'}
+        </div>`;
+    }
+    if (!body) body = '<div class="empty">Tidak ada akses untuk modul ini.</div>';
+    return `<button class="back" data-back-tab="lainnya">‹ Kembali</button><h2 class="title">Pengaduan Warga</h2>${body}`;
+  },
+  kt(){
+    const manage = can.manageKT();
+    return `
+      <button class="back" data-back-tab="lainnya">‹ Kembali</button>
+      <h2 class="title">Karang Taruna Tulusari</h2>
+      <div class="stat-grid"><div class="stat"><div class="n">${cache.kt.length}</div><div class="l">Anggota terdata</div></div>
+        <div class="stat"><div class="n" style="font-size:14px; padding-top:5px">${esc((cache.kt.find(a=>String(a.peran).toLowerCase().indexOf('ketua')>-1)||{}).nama || '-')}</div><div class="l">Ketua</div></div></div>
+      ${manage ? '<button class="btn outline block" id="btnTambahKT">+ Tambah anggota</button>' : ''}
+      <div class="card" style="margin-top:12px">
+        ${cache.kt.length ? cache.kt.map(a=>`
+          <div class="item">
+            <div class="row"><div><div class="item-title">${esc(a.nama)}</div><div class="item-sub">${esc(a.peran||'Anggota')}${a.no_hp?(' · '+esc(a.no_hp)):''}</div></div>
+            ${String(a.status_aktif).toLowerCase()==='nonaktif' ? '<span class="badge due">Nonaktif</span>' : '<span class="badge ok">Aktif</span>'}</div>
+            ${manage ? `<div class="btn-row"><button class="btn outline sm" data-edit-kt="${esc(a.id)}">Ubah</button><button class="btn brick sm" data-del-kt="${esc(a.id)}">Hapus</button></div>` : ""}
+          </div>`).join("") : '<div class="empty">Belum ada data anggota.</div>'}
+      </div>
+      <div class="mask-note">Kegiatan Karang Taruna diumumkan lewat menu Info &amp; Pengumuman. Kas Jimpitan kini dicatat di menu Kas &amp; Iuran (tetap terpisah dari Kas RT).</div>`;
+  },
+  kontak(){
+    const manage = can.manageKontak();
+    return `
+      <button class="back" data-back-tab="lainnya">‹ Kembali</button>
+      <h2 class="title">Kontak Penting</h2>
+      ${manage ? '<button class="btn outline block" id="btnTambahKontak">+ Tambah kontak</button>' : ''}
+      <div class="card" style="margin-top:${manage?'12px':'0'}">
+        ${cache.kontak.length ? cache.kontak.map(c=>`
+          <div class="item row">
+            <div><div class="item-title">${esc(c.nama)}</div><div class="item-sub">${esc(c.peran||'-')}</div></div>
+            <div style="display:flex; align-items:center; gap:8px">
+              <a href="tel:${esc(c.no_hp)}" style="font-size:18px; text-decoration:none">📞</a>
+              ${manage ? `<button class="btn outline sm" data-edit-kontak="${esc(c.id)}">Ubah</button><button class="btn brick sm" data-del-kontak="${esc(c.id)}">Hapus</button>` : ""}
+            </div>
+          </div>`).join("") : '<div class="empty">Belum ada kontak terdata.</div>'}
+      </div>`;
+  },
+  jimpitan(){
+    const canInput = can.inputJimpitan(), canPost = can.postJimpitan();
+    const belum = cache.jimpitanLog.filter(l => String(l.status||'belum_posting').toLowerCase() !== 'sudah_posting');
+    const sudah = cache.jimpitanLog.filter(l => String(l.status||'').toLowerCase() === 'sudah_posting');
+    return `
+      <button class="back" data-back-tab="lainnya">‹ Kembali</button>
+      <h2 class="title">Jimpitan</h2>
+      <div class="mask-note" style="margin-top:-4px">Satuan jimpitan adalah rumah (Blok + No. Rumah), bukan KK — Rp500/hari. Log tercatat dulu di sini, baru resmi masuk saldo Kas Jimpitan setelah diposting.</div>
+      ${canInput ? '<button class="btn gold block" id="btnCatatJimpitan" style="margin-top:12px">+ Catat setoran rumah</button>' : ''}
+      <div class="card" style="margin-top:12px">
+        <div class="row"><span class="label">Total log belum diposting</span></div>
+        <div class="value-lg">${rupiah(cache.jimpitanTotalBelum)}</div>
+      </div>
+      ${canPost ? `<button class="btn block" id="btnPostingJimpitan" ${belum.length?'':'disabled'}>Posting ke Kas Jimpitan</button>` : ''}
+      <h2 class="title" style="margin-top:18px; font-size:15px">Log belum diposting (${belum.length})</h2>
+      <div class="card">
+        ${belum.length ? belum.map(l=>`
+          <div class="item">
+            <label class="row" style="cursor:pointer">
+              <span>${canPost ? `<input type="checkbox" class="jimpitan-check" value="${esc(l.id)}" style="margin-right:8px">` : ''}<span class="item-title">Blok ${esc(l.blok)} / No. ${esc(l.no_rumah)}</span></span>
+              <span style="font-weight:700">${rupiah(l.jumlah)}</span>
+            </label>
+            <div class="item-sub">${fmtTanggal(l.tanggal)} · dicatat oleh ${esc(l.dicatat_oleh||'-')}${l.catatan?(' · '+esc(l.catatan)):''}</div>
+            <div class="btn-row"><button class="btn brick sm" data-del-jimpitan="${esc(l.id)}">Hapus</button></div>
+          </div>`).join("") : '<div class="empty">Belum ada log jimpitan yang menunggu posting.</div>'}
+      </div>
+      ${sudah.length ? `
+      <h2 class="title" style="margin-top:18px; font-size:15px">Riwayat sudah diposting</h2>
+      <div class="card">
+        ${sudah.slice(0,20).map(l=>`
+          <div class="item">
+            <div class="row"><span class="item-title">Blok ${esc(l.blok)} / No. ${esc(l.no_rumah)}</span><span style="font-weight:700">${rupiah(l.jumlah)}</span></div>
+            <div class="item-sub">${fmtTanggal(l.tanggal)} · dicatat oleh ${esc(l.dicatat_oleh||'-')}</div>
+          </div>`).join("")}
+      </div>` : ""}`;
+  },
+
+  iuranrt(){
+    const manage = can.manageIuranRT();
+    return `
+      <button class="back" data-back-tab="lainnya">‹ Kembali</button>
+      <h2 class="title">Iuran RT</h2>
+      <div class="mask-note" style="margin-top:-4px">Iuran per KK, Rp5.000/pertemuan (Minggu Pahingan). Setelah checklist selesai, total yang lunas diposting jadi 1 mutasi masuk di Kas RT.</div>
+      <div class="btn-row" style="margin-top:12px">
+        ${manage ? '<button class="btn gold block" id="btnBuatPertemuan">+ Buat pertemuan baru</button>' : ''}
+        <button class="btn outline block" id="btnLihatTunggakan">Rekap Tunggakan</button>
+      </div>
+      <div class="card" style="margin-top:12px; padding:4px 12px">
+        ${cache.pertemuan.length ? cache.pertemuan.map(p=>`
+          <button class="list-link" data-open-pertemuan="${esc(p.id)}">
+            <span class="txt"><div class="name">${esc(p.keterangan)} — ${fmtTanggal(p.tanggal)}</div>
+            <div class="desc">${p.total_lunas}/${p.total_kk} KK lunas · ${rupiah(p.terkumpul)} ${String(p.status).toLowerCase()==='sudah_posting'?'· sudah diposting':''}</div></span>
+            <span class="chev">›</span>
+          </button>`).join("") : '<div class="empty">Belum ada pertemuan Iuran RT.</div>'}
+      </div>`;
+  },
+
+  tunggakan(){
+    return `
+      <button class="back" data-back-tab="iuranrt">‹ Kembali</button>
+      <h2 class="title">Rekap Tunggakan Iuran RT</h2>
+      <div class="mask-note" style="margin-top:-4px">Total belum bayar tiap KK, dijumlahkan dari SEMUA pertemuan (bukan cuma yang sedang berjalan).</div>
+      <div class="card" style="margin-top:12px">
+        <div class="label">Total tunggakan seluruh KK</div>
+        <div class="value-lg">${rupiah(cache.tunggakanTotal)}</div>
+      </div>
+      <div class="card">
+        ${cache.tunggakan.length ? cache.tunggakan.map(t=>`
+          <div class="item">
+            <div class="row"><span class="item-title">${esc(t.kepala)}</span><span style="font-weight:700; color:var(--brick)">${rupiah(t.total)}</span></div>
+            <div class="item-sub">No. KK ${esc(t.no_kk)} · menunggak ${t.jumlah_pertemuan} pertemuan</div>
+            ${can.manageIuranRT() ? `<div class="btn-row"><button class="btn gold sm" data-bayar-tunggakan="${esc(t.no_kk)}">Tandai lunas & masuk Kas RT</button></div>` : ''}
+          </div>`).join("") : '<div class="empty">Tidak ada KK yang menunggak. 🎉</div>'}
+      </div>`;
+  },
+
+  iuranrtDetail(pertemuan){
+    const manage = can.manageIuranRT();
+    const posted = String(pertemuan.status).toLowerCase() === 'sudah_posting';
+    const lunas = cache.iuran.filter(i => String(i.status).toLowerCase() === 'lunas');
+    const total = lunas.reduce((s,i)=> s + (Number(i.nominal)||0), 0);
+    return `
+      <button class="back" data-back-tab="iuranrt">‹ Kembali</button>
+      <h2 class="title">${esc(pertemuan.keterangan)} — ${fmtTanggal(pertemuan.tanggal)}</h2>
+      <div class="stat-grid">
+        <div class="stat"><div class="n">${lunas.length}/${cache.iuran.length}</div><div class="l">KK lunas</div></div>
+        <div class="stat"><div class="n" style="font-size:16px; padding-top:4px">${rupiah(total)}</div><div class="l">Terkumpul</div></div>
+      </div>
+      ${posted ? '<div class="badge ok" style="margin-bottom:10px; display:inline-block">Sudah diposting ke Kas RT</div>' : ''}
+      ${manage && !posted ? `<button class="btn block" id="btnTutupPertemuan" data-id="${esc(pertemuan.id)}">Tutup &amp; Posting ke Kas RT</button>` : ''}
+      <div class="card" style="margin-top:12px">
+        ${cache.iuran.map(i=>{
+          const totalTagihan = (Number(i.nominal)||0) + (Number(i.tunggakan_lain_total)||0);
+          return `
+          <div class="item">
+            <div class="row">
+              <div><div class="item-title">${esc(i.kepala)}</div><div class="item-sub">No. KK ${esc(i.no_kk)} · Pertemuan ini: ${rupiah(i.nominal)}</div>
+              ${i.tunggakan_lain_jumlah > 0 ? `<div class="item-sub" style="color:var(--brick)">+ tunggakan ${i.tunggakan_lain_jumlah} pertemuan lain: ${rupiah(i.tunggakan_lain_total)}</div>
+              <div class="item-sub" style="font-weight:700; color:var(--ink)">Total tagihan: ${rupiah(totalTagihan)}</div>` : ''}</div>
+              ${i.status === 'lunas' ? '<span class="badge ok">Lunas</span>' : '<span class="badge due">Belum Bayar</span>'}
+            </div>
+            ${manage && !posted ? `<div class="btn-row">
+              <button class="btn ${i.status==='lunas'?'outline':''} sm" data-toggle-iuran="${esc(i.id)}" data-status="${i.status==='lunas'?'belum':'lunas'}">${i.status==='lunas'?'Tandai belum bayar':'Tandai lunas'}</button>
+              ${i.tunggakan_lain_jumlah > 0 ? `<button class="btn gold sm" data-bayar-tunggakan="${esc(i.no_kk)}">Lunaskan tunggakan lama juga</button>` : ''}
+            </div>` : ''}
+          </div>`;}).join("")}
+      </div>`;
+  },
+
+  inventaris(){
+    const manage = can.manageInventaris();
+    const kondisiBadge = k => {
+      k = String(k||'Baik');
+      if (k.toLowerCase() === 'baik') return `<span class="badge ok">${esc(k)}</span>`;
+      return `<span class="badge due">${esc(k)}</span>`;
+    };
+    const groups = {};
+    cache.inventaris.forEach(x => { (groups[x.kategori||'Lainnya'] = groups[x.kategori||'Lainnya'] || []).push(x); });
+    return `
+      <button class="back" data-back-tab="lainnya">‹ Kembali</button>
+      <h2 class="title">Inventaris &amp; Aset RT</h2>
+      <div class="mask-note" style="margin-top:-4px">Daftar barang milik RT (termasuk gerabah sewaan) beserta jumlah &amp; kondisinya.</div>
+      ${manage ? '<button class="btn gold block" id="btnTambahInventaris" style="margin-top:12px">+ Tambah barang</button>' : ''}
+      ${cache.inventaris.length ? Object.keys(groups).sort().map(kat => `
+        <h2 class="title" style="margin-top:18px; font-size:15px">${esc(kat)}</h2>
+        <div class="card">
+          ${groups[kat].map(x=>`
+            <div class="item">
+              <div class="row"><span class="item-title">${esc(x.nama_barang)}</span>${kondisiBadge(x.kondisi)}</div>
+              <div class="item-sub">Jumlah: ${esc(x.jumlah)}${x.lokasi?(' · Lokasi: '+esc(x.lokasi)):''}</div>
+              ${x.catatan ? `<div class="item-sub">${esc(x.catatan)}</div>` : ''}
+              ${manage ? `<div class="btn-row"><button class="btn outline sm" data-edit-inventaris="${esc(x.id)}">Ubah</button><button class="btn brick sm" data-del-inventaris="${esc(x.id)}">Hapus</button></div>` : ''}
+            </div>`).join("")}
+        </div>`).join("") : '<div class="card"><div class="empty">Belum ada barang terdata.</div></div>'}
+      `;
+  }
+};
+
+/* ====================== FORM: Tambah/Ubah Anggota ====================== */
+function anggotaForm(no_kk, existing) {
+  const v = existing || {};
+  return `
+    <button class="back" data-back-kk="${esc(no_kk)}">‹ Batal</button>
+    <h2 class="title">${existing ? "Ubah Anggota" : "Tambah Anggota"} — KK ${esc(no_kk)}</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Nama lengkap <span style="color:var(--brick)">*wajib</span></label><input id="fNama" value="${esc(v.nama||'')}"></div>
+    <div class="field"><label>NIK <span style="color:var(--brick)">*wajib</span></label><input id="fNik" inputmode="numeric" value="${esc(v.nik||'')}" ${existing ? "readonly" : ""}></div>
+    <div class="field"><label>Jenis kelamin <span class="opt">(opsional)</span></label>
+      <select id="fJk"><option value="">— pilih —</option><option ${v.jenis_kelamin==='Laki-laki'?'selected':''}>Laki-laki</option><option ${v.jenis_kelamin==='Perempuan'?'selected':''}>Perempuan</option></select></div>
+    <div class="field"><label>Tempat/Tanggal lahir <span class="opt">(opsional)</span></label><input id="fTtl" value="${esc(v.ttl||'')}" placeholder="Sragen, 17-08-1990"></div>
+    <div class="field"><label>Agama <span class="opt">(opsional)</span></label><input id="fAgama" value="${esc(v.agama||'')}"></div>
+    <div class="field"><label>Pendidikan terakhir <span class="opt">(opsional)</span></label><input id="fPendidikan" value="${esc(v.pendidikan||'')}"></div>
+    <div class="field"><label>Pekerjaan <span class="opt">(opsional)</span></label><input id="fPekerjaan" value="${esc(v.pekerjaan||'')}"></div>
+    <div class="field"><label>Status perkawinan <span class="opt">(opsional)</span></label><input id="fKawin" value="${esc(v.status_kawin||'')}" placeholder="Belum kawin / Kawin / Cerai"></div>
+    <div class="field"><label>Status hubungan dalam keluarga <span class="opt">(opsional)</span></label><input id="fHubungan" value="${esc(v.status_hubungan||'')}" placeholder="Kepala Keluarga / Istri / Anak"></div>
+    <div class="field"><label>Nama ayah <span class="opt">(opsional)</span></label><input id="fAyah" value="${esc(v.nama_ayah||'')}"></div>
+    <div class="field"><label>Nama ibu <span class="opt">(opsional)</span></label><input id="fIbu" value="${esc(v.nama_ibu||'')}"></div>
+    ${!existing ? `
+    <div class="field"><label>Blok/No. rumah <span class="opt">(alamat KK — isi jika KK baru)</span></label><input id="fBlok" value="${esc(v.blok||'')}" placeholder="Blok A / No. 3"></div>` : ""}
+    <button class="btn block" id="btnSimpanAnggota" data-existing="${existing?'1':'0'}" data-no-kk="${esc(no_kk)}">Simpan</button>`;
+}
+
+/* ====================== FORM: Tambah KK baru ====================== */
+function kkAnggotaRow(idx, first) {
+  return `
+    <div class="kk-anggota-row" data-idx="${idx}" style="border:1px solid var(--line,#e3ddd3); border-radius:10px; padding:10px 12px 2px; margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <strong style="font-size:12.5px; color:var(--sub)">${first ? "Anggota 1 — Kepala Keluarga" : "Anggota tambahan"}</strong>
+        ${first ? "" : `<button type="button" class="btn brick sm" data-remove-row="${idx}">Hapus baris</button>`}
+      </div>
+      <div class="field"><label>Nama lengkap ${first ? '<span style="color:var(--brick)">*wajib</span>' : '<span class="opt">(opsional)</span>'}</label><input class="fRowNama" data-idx="${idx}"></div>
+      <div class="field"><label>NIK ${first ? '<span style="color:var(--brick)">*wajib</span>' : '<span class="opt">(opsional)</span>'}</label><input class="fRowNik" data-idx="${idx}" inputmode="numeric"></div>
+      <div class="field"><label>Status hubungan <span class="opt">(opsional)</span></label><input class="fRowHubungan" data-idx="${idx}" value="${first ? 'Kepala Keluarga' : ''}" placeholder="Istri / Anak / dll"></div>
+    </div>`;
+}
+function kkForm() {
+  kkRowSeq = 0;
+  return `
+    <button class="back" data-back-tab="warga">‹ Batal</button>
+    <h2 class="title">Tambah KK Baru</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>No. KK <span style="color:var(--brick)">*wajib</span></label><input id="fNoKK" inputmode="numeric"></div>
+    <div class="field"><label>Blok/No. rumah <span class="opt">(opsional, bisa dilengkapi nanti)</span></label><input id="fBlok" placeholder="Blok A / No. 3"></div>
+    <p style="font-size:12.5px; color:var(--sub); margin:0 0 12px">Isi anggota keluarga. Hanya Nama &amp; NIK anggota pertama (Kepala Keluarga) yang wajib — anggota lain bisa ditambah sekarang lewat tombol di bawah, atau menyusul lewat "+ Tambah anggota" di halaman KK.</p>
+    <div id="kkAnggotaRows">${kkAnggotaRow(0, true)}</div>
+    <button type="button" class="btn outline block" id="btnTambahBarisAnggota">+ Tambah anggota lain</button>
+    <button class="btn block" id="btnSimpanKK" style="margin-top:12px">Simpan KK</button>`;
+}
+function bindKkRowRemove() {
+  Array.from(document.querySelectorAll("[data-remove-row]")).forEach(b => {
+    b.onclick = () => { const row = b.closest(".kk-anggota-row"); if (row) row.remove(); };
+  });
+}
+
+/* ====================== FORM: Mutasi Kas (RT, Jimpitan & Gerabah) ====================== */
+const KAS_LABEL = { rt: "Kas RT", jimpitan: "Kas Jimpitan", gerabah: "Kas Gerabah" };
+function mutasiForm(existing, jenisKas) {
+  jenisKas = jenisKas || "rt";
+  const v = existing || {};
+  const today = new Date().toISOString().slice(0,10);
+  return `
+    <button class="back" data-back-tab="kas">‹ Batal</button>
+    <h2 class="title">${existing ? "Ubah Mutasi" : "Catat Mutasi Baru"} — ${esc(KAS_LABEL[jenisKas] || "Kas RT")}</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Tanggal</label><input id="fTanggal" type="date" value="${esc(v.tanggal ? new Date(v.tanggal).toISOString().slice(0,10) : today)}"></div>
+    <div class="field"><label>Keterangan</label><input id="fKeterangan" value="${esc(v.keterangan||'')}" placeholder="Iuran warga bulan Oktober"></div>
+    <div class="field"><label>Jenis</label><select id="fJenis"><option value="masuk" ${v.jenis==='masuk'?'selected':''}>Pemasukan</option><option value="keluar" ${v.jenis==='keluar'?'selected':''}>Pengeluaran</option></select></div>
+    <div class="field"><label>Jumlah (Rp)</label><input id="fJumlah" type="number" min="0" value="${esc(v.jumlah||'')}"></div>
+    <button class="btn block" id="btnSimpanMutasi" data-id="${esc(v.id||'')}" data-jenis-kas="${jenisKas}">Simpan</button>`;
+}
+
+/* ====================== FORM: Pengumuman ====================== */
+function pengumumanForm(existing) {
+  const v = existing || {};
+  const today = new Date().toISOString().slice(0,10);
+  return `
+    <button class="back" data-back-tab="info">‹ Batal</button>
+    <h2 class="title">${existing ? "Ubah Pengumuman" : "Buat Pengumuman"}</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Judul</label><input id="fJudul" value="${esc(v.judul||'')}" placeholder="Kerja Bakti Bersih Dukuh"></div>
+    <div class="field"><label>Tanggal</label><input id="fTanggal" type="date" value="${esc(v.tanggal ? new Date(v.tanggal).toISOString().slice(0,10) : today)}"></div>
+    <div class="field"><label>Tempat <span class="opt">(opsional)</span></label><input id="fTempat" value="${esc(v.tempat||'')}"></div>
+    <div class="field"><label>Isi/keterangan <span class="opt">(opsional)</span></label><input id="fIsi" value="${esc(v.isi||'')}"></div>
+    <button class="btn block" id="btnSimpanPengumuman" data-id="${esc(v.id||'')}">Simpan</button>`;
+}
+
+/* ====================== FORM: Ajukan Surat ====================== */
+function suratForm(jenisSurat) {
+  return `
+    <button class="back" data-back-tab="surat">‹ Batal</button>
+    <h2 class="title">Ajukan ${esc(jenisSurat)}</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Nama pemohon</label><input value="${esc(session.nama)}" disabled></div>
+    <div class="field"><label>Keperluan</label><input id="fKeperluan" placeholder="Contoh: untuk melamar pekerjaan"></div>
+    <button class="btn block" id="btnAjukanSurat" data-jenis="${esc(jenisSurat)}">Kirim pengajuan</button>`;
+}
+
+/* ====================== FORM: Buat Pengaduan ====================== */
+function pengaduanForm() {
+  return `
+    <button class="back" data-back-tab="pengaduan">‹ Batal</button>
+    <h2 class="title">Buat Pengaduan</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Judul</label><input id="fJudul" placeholder="Lampu jalan mati di Blok C"></div>
+    <div class="field"><label>Deskripsi</label><input id="fDeskripsi" placeholder="Jelaskan keluhan Anda"></div>
+    <button class="btn block" id="btnKirimPengaduan">Kirim pengaduan</button>`;
+}
+
+/* ====================== FORM: Karang Taruna ====================== */
+function ktForm(existing) {
+  const v = existing || {};
+  return `
+    <button class="back" data-back-tab="kt">‹ Batal</button>
+    <h2 class="title">${existing ? "Ubah Anggota" : "Tambah Anggota"} Karang Taruna</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Nama</label><input id="fNama" value="${esc(v.nama||'')}"></div>
+    <div class="field"><label>Peran <span class="opt">(opsional)</span></label><input id="fPeran" value="${esc(v.peran||'')}" placeholder="Ketua / Bendahara / Anggota"></div>
+    <div class="field"><label>No. HP <span class="opt">(opsional)</span></label><input id="fNoHp" value="${esc(v.no_hp||'')}"></div>
+    ${existing ? `<div class="field"><label>Status</label><select id="fStatusAktif"><option value="aktif" ${String(v.status_aktif).toLowerCase()!=='nonaktif'?'selected':''}>Aktif</option><option value="nonaktif" ${String(v.status_aktif).toLowerCase()==='nonaktif'?'selected':''}>Nonaktif</option></select></div>` : ""}
+    <button class="btn block" id="btnSimpanKT" data-id="${esc(v.id||'')}">Simpan</button>`;
+}
+
+/* ====================== FORM: Kontak ====================== */
+function kontakForm(existing) {
+  const v = existing || {};
+  return `
+    <button class="back" data-back-tab="kontak">‹ Batal</button>
+    <h2 class="title">${existing ? "Ubah Kontak" : "Tambah Kontak"}</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Nama</label><input id="fNama" value="${esc(v.nama||'')}"></div>
+    <div class="field"><label>Peran/jabatan <span class="opt">(opsional)</span></label><input id="fPeran" value="${esc(v.peran||'')}" placeholder="Ketua RT 11"></div>
+    <div class="field"><label>No. HP</label><input id="fNoHp" value="${esc(v.no_hp||'')}"></div>
+    <button class="btn block" id="btnSimpanKontak" data-id="${esc(v.id||'')}">Simpan</button>`;
+}
+
+/* ====================== FORM: Pertemuan Iuran RT ====================== */
+function pertemuanForm() {
+  const today = new Date().toISOString().slice(0,10);
+  return `
+    <button class="back" data-back-tab="iuranrt">‹ Batal</button>
+    <h2 class="title">Buat Pertemuan Iuran RT</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Tanggal pertemuan</label><input id="fTanggal" type="date" value="${today}"></div>
+    <div class="field"><label>Keterangan</label><input id="fKeterangan" value="Pertemuan Minggu Pahingan" placeholder="Pertemuan Minggu Pahingan"></div>
+    <div class="field"><label>Nominal per KK (Rp)</label><input id="fNominal" type="number" min="0" value="5000"></div>
+    <button class="btn block" id="btnSimpanPertemuan">Buat &amp; siapkan tagihan semua KK</button>`;
+}
+
+/* ====================== FORM: Catat Jimpitan ====================== */
+function jimpitanForm() {
+  const today = new Date().toISOString().slice(0,10);
+  const opsiRumah = cache.rumah.map(r => `<option value="${esc(r.blok)}|${esc(r.no_rumah)}">Blok ${esc(r.blok)} / No. ${esc(r.no_rumah)} (${r.jumlah_kk} KK)</option>`).join("");
+  return `
+    <button class="back" data-back-tab="jimpitan">‹ Batal</button>
+    <h2 class="title">Catat Setoran Jimpitan</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Tanggal</label><input id="fTanggal" type="date" value="${today}"></div>
+    <div class="field"><label>Rumah</label>
+      <select id="fRumahPilih">
+        <option value="">— pilih dari data warga —</option>${opsiRumah}
+        <option value="__manual__">Isi manual…</option>
+      </select>
+    </div>
+    <div id="fRumahManualWrap" style="display:none">
+      <div class="field"><label>Blok</label><input id="fBlok"></div>
+      <div class="field"><label>No. Rumah</label><input id="fNoRumah"></div>
+    </div>
+    <div class="field"><label>Jumlah (Rp)</label><input id="fJumlah" type="number" min="0" value="500"></div>
+    <div class="field"><label>Catatan <span class="opt">(opsional)</span></label><input id="fCatatan"></div>
+    <button class="btn block" id="btnSimpanJimpitan">Simpan</button>`;
+}
+
+/* ====================== FORM: Inventaris/Aset ====================== */
+function inventarisForm(existing) {
+  const v = existing || {};
+  const kategoriOpsi = ["Gerabah/Perlengkapan Hajatan","Sound System","Alat Kebersihan","Perkakas","Karang Taruna","Lainnya"];
+  const kondisiOpsi = ["Baik","Rusak Ringan","Rusak Berat","Hilang"];
+  return `
+    <button class="back" data-back-tab="inventaris">‹ Batal</button>
+    <h2 class="title">${existing ? "Ubah Barang" : "Tambah Barang"}</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Nama barang <span style="color:var(--brick)">*wajib</span></label><input id="fNama" value="${esc(v.nama_barang||'')}"></div>
+    <div class="field"><label>Kategori</label>
+      <select id="fKategori">${kategoriOpsi.map(k=>`<option ${v.kategori===k?'selected':''}>${esc(k)}</option>`).join("")}</select>
+    </div>
+    <div class="field"><label>Jumlah</label><input id="fJumlah" type="number" min="0" value="${esc(v.jumlah||1)}"></div>
+    <div class="field"><label>Kondisi</label>
+      <select id="fKondisi">${kondisiOpsi.map(k=>`<option ${v.kondisi===k?'selected':''}>${esc(k)}</option>`).join("")}</select>
+    </div>
+    <div class="field"><label>Lokasi penyimpanan <span class="opt">(opsional)</span></label><input id="fLokasi" value="${esc(v.lokasi||'')}" placeholder="Gudang RT / Rumah Ketua RT / dll"></div>
+    <div class="field"><label>Catatan <span class="opt">(opsional)</span></label><input id="fCatatan" value="${esc(v.catatan||'')}"></div>
+    <button class="btn block" id="btnSimpanInventaris" data-existing="${existing?'1':'0'}" data-id="${esc(v.id||'')}">Simpan</button>`;
+}
+
+/* ====================== EVENTS ====================== */
+function attachEvents() {
+  const q = sel => document.querySelector(sel);
+  const qa = sel => Array.from(document.querySelectorAll(sel));
+
+  q("#btnLoginPengurus") && q("#btnLoginPengurus").addEventListener("click", doLoginPengurus);
+  q("#btnLoginWarga") && q("#btnLoginWarga").addEventListener("click", doLoginWarga);
+  qa("[data-mode]").forEach(b => b.addEventListener("click", () => { loginMode = b.dataset.mode; formError = ""; render(); }));
+  q("#btnLogout") && q("#btnLogout").addEventListener("click", () => { clearSession(); currentTab = "beranda"; render(); });
+
+  qa("[data-tab]").forEach(b => b.addEventListener("click", () => goTab(b.dataset.tab)));
+  qa("[data-open-sub]").forEach(b => b.addEventListener("click", () => { currentTab = b.dataset.openSub; render(); loadAndShow(b.dataset.openSub); }));
+  qa("[data-back-tab]").forEach(b => b.addEventListener("click", () => goTab(b.dataset.backTab)));
+
+  qa("[data-open-kk]").forEach(b => b.addEventListener("click", () => openKK(b.dataset.openKk)));
+  qa("[data-back-kk]").forEach(b => b.addEventListener("click", () => openKK(b.dataset.backKk)));
+  q("#btnTambahKK") && q("#btnTambahKK").addEventListener("click", () => { formError=""; setScreen(kkForm()); attachEvents(); });
+  q("#btnSimpanKK") && q("#btnSimpanKK").addEventListener("click", submitKK);
+  q("#btnTambahBarisAnggota") && q("#btnTambahBarisAnggota").addEventListener("click", () => {
+    kkRowSeq++;
+    document.getElementById("kkAnggotaRows").insertAdjacentHTML("beforeend", kkAnggotaRow(kkRowSeq, false));
+    bindKkRowRemove();
+  });
+  bindKkRowRemove();
+  qa("[data-add-anggota]").forEach(b => b.addEventListener("click", () => { formError=""; setScreen(anggotaForm(b.dataset.addAnggota, null)); attachEvents(); }));
+  q("#btnSimpanAnggota") && q("#btnSimpanAnggota").addEventListener("click", submitAnggota);
+  qa("[data-del-kk]").forEach(b => b.addEventListener("click", () => delKK(b.dataset.delKk)));
+
+  qa("[data-tambah-mutasi]").forEach(b => b.addEventListener("click", () => { formError=""; setScreen(mutasiForm(null, b.dataset.tambahMutasi)); attachEvents(); }));
+  q("#btnSimpanMutasi") && q("#btnSimpanMutasi").addEventListener("click", submitMutasi);
+  qa("[data-edit-mutasi]").forEach(b => b.addEventListener("click", () => {
+    const jenisKas = b.dataset.jenisKas || "rt";
+    const list = jenisKas === "jimpitan" ? cache.kasJimpitan.mutasi : jenisKas === "gerabah" ? cache.kasGerabah.mutasi : cache.kas.mutasi;
+    const m = list.find(x => x.id === b.dataset.editMutasi);
+    formError = ""; setScreen(mutasiForm(m, jenisKas)); attachEvents();
+  }));
+  qa("[data-del-mutasi]").forEach(b => b.addEventListener("click", () => delMutasi(b.dataset.delMutasi, b.dataset.jenisKas || "rt")));
+
+  q("#btnTambahAkun") && q("#btnTambahAkun").addEventListener("click", () => { formError=""; setScreen(userForm()); attachEvents(); });
+  q("#btnSimpanAkun") && q("#btnSimpanAkun").addEventListener("click", submitUser);
+  qa("[data-del-user]").forEach(b => b.addEventListener("click", () => delUser(b.dataset.delUser)));
+  qa("[data-reset-pw]").forEach(b => b.addEventListener("click", () => resetPw(b.dataset.resetPw)));
+  qa("[data-toggle-user]").forEach(b => b.addEventListener("click", () => toggleUser(b.dataset.toggleUser, b.dataset.status)));
+
+  /* ---- pengumuman ---- */
+  q("#btnTambahPengumuman") && q("#btnTambahPengumuman").addEventListener("click", () => { formError=""; setScreen(pengumumanForm()); attachEvents(); });
+  qa("[data-edit-pengumuman]").forEach(b => b.addEventListener("click", () => {
+    const p = cache.pengumuman.find(x => x.id === b.dataset.editPengumuman);
+    formError = ""; setScreen(pengumumanForm(p)); attachEvents();
+  }));
+  q("#btnSimpanPengumuman") && q("#btnSimpanPengumuman").addEventListener("click", submitPengumuman);
+  qa("[data-del-pengumuman]").forEach(b => b.addEventListener("click", () => delPengumuman(b.dataset.delPengumuman)));
+
+  /* ---- surat ---- */
+  qa("[data-ajukan-surat]").forEach(b => b.addEventListener("click", () => { formError=""; setScreen(suratForm(b.dataset.ajukanSurat)); attachEvents(); }));
+  q("#btnAjukanSurat") && q("#btnAjukanSurat").addEventListener("click", submitSurat);
+  qa("[data-proses-surat]").forEach(b => b.addEventListener("click", () => prosesSurat(b.dataset.prosesSurat, "Diproses")));
+  qa("[data-terbit-surat]").forEach(b => b.addEventListener("click", () => prosesSurat(b.dataset.terbitSurat, null, true)));
+  qa("[data-cetak-surat]").forEach(b => b.addEventListener("click", () => cetakSurat(b.dataset.cetakSurat)));
+  qa("[data-del-surat]").forEach(b => b.addEventListener("click", () => delSurat(b.dataset.delSurat)));
+
+  /* ---- pengaduan ---- */
+  q("#btnBuatPengaduan") && q("#btnBuatPengaduan").addEventListener("click", () => { formError=""; setScreen(pengaduanForm()); attachEvents(); });
+  q("#btnKirimPengaduan") && q("#btnKirimPengaduan").addEventListener("click", submitPengaduan);
+  qa("[data-selesai-pengaduan]").forEach(b => b.addEventListener("click", () => prosesPengaduan(b.dataset.selesaiPengaduan, "Selesai")));
+  qa("[data-del-pengaduan]").forEach(b => b.addEventListener("click", () => delPengaduan(b.dataset.delPengaduan)));
+
+  /* ---- karang taruna ---- */
+  q("#btnTambahKT") && q("#btnTambahKT").addEventListener("click", () => { formError=""; setScreen(ktForm()); attachEvents(); });
+  qa("[data-edit-kt]").forEach(b => b.addEventListener("click", () => {
+    const a = cache.kt.find(x => x.id === b.dataset.editKt);
+    formError = ""; setScreen(ktForm(a)); attachEvents();
+  }));
+  q("#btnSimpanKT") && q("#btnSimpanKT").addEventListener("click", submitKT);
+  qa("[data-del-kt]").forEach(b => b.addEventListener("click", () => delKT(b.dataset.delKt)));
+
+  /* ---- kontak ---- */
+  q("#btnTambahKontak") && q("#btnTambahKontak").addEventListener("click", () => { formError=""; setScreen(kontakForm()); attachEvents(); });
+  qa("[data-edit-kontak]").forEach(b => b.addEventListener("click", () => {
+    const c = cache.kontak.find(x => x.id === b.dataset.editKontak);
+    formError = ""; setScreen(kontakForm(c)); attachEvents();
+  }));
+  q("#btnSimpanKontak") && q("#btnSimpanKontak").addEventListener("click", submitKontak);
+  qa("[data-del-kontak]").forEach(b => b.addEventListener("click", () => delKontak(b.dataset.delKontak)));
+
+  /* ---- iuran RT ---- */
+  q("#btnBuatPertemuan") && q("#btnBuatPertemuan").addEventListener("click", () => { formError=""; setScreen(pertemuanForm()); attachEvents(); });
+  q("#btnLihatTunggakan") && q("#btnLihatTunggakan").addEventListener("click", () => goTab("tunggakan"));
+  q("#btnSimpanPertemuan") && q("#btnSimpanPertemuan").addEventListener("click", submitPertemuan);
+  qa("[data-open-pertemuan]").forEach(b => b.addEventListener("click", () => openPertemuan(b.dataset.openPertemuan)));
+  q("#btnTutupPertemuan") && q("#btnTutupPertemuan").addEventListener("click", () => tutupPertemuan(q("#btnTutupPertemuan").dataset.id));
+  qa("[data-toggle-iuran]").forEach(b => b.addEventListener("click", () => toggleIuran(b.dataset.toggleIuran, b.dataset.status)));
+  qa("[data-bayar-tunggakan]").forEach(b => b.addEventListener("click", () => bayarTunggakan(b.dataset.bayarTunggakan)));
+
+  /* ---- jimpitan ---- */
+  q("#btnCatatJimpitan") && q("#btnCatatJimpitan").addEventListener("click", () => { formError=""; setScreen(jimpitanForm()); attachEvents(); });
+  const selRumah = q("#fRumahPilih");
+  selRumah && selRumah.addEventListener("change", () => {
+    q("#fRumahManualWrap").style.display = selRumah.value === "__manual__" ? "block" : "none";
+  });
+  q("#btnSimpanJimpitan") && q("#btnSimpanJimpitan").addEventListener("click", submitJimpitan);
+  qa("[data-del-jimpitan]").forEach(b => b.addEventListener("click", () => delJimpitan(b.dataset.delJimpitan)));
+  q("#btnPostingJimpitan") && q("#btnPostingJimpitan").addEventListener("click", postingJimpitan);
+
+  /* ---- inventaris ---- */
+  q("#btnTambahInventaris") && q("#btnTambahInventaris").addEventListener("click", () => { formError=""; setScreen(inventarisForm()); attachEvents(); });
+  qa("[data-edit-inventaris]").forEach(b => b.addEventListener("click", () => {
+    const item = cache.inventaris.find(x => x.id === b.dataset.editInventaris);
+    formError=""; setScreen(inventarisForm(item)); attachEvents();
+  }));
+  q("#btnSimpanInventaris") && q("#btnSimpanInventaris").addEventListener("click", submitInventaris);
+  qa("[data-del-inventaris]").forEach(b => b.addEventListener("click", () => delInventaris(b.dataset.delInventaris)));
+}
+
+/* ---- login ---- */
+async function doLoginPengurus() {
+  const username = document.getElementById("fUsername").value.trim();
+  const password = document.getElementById("fPassword").value;
+  if (!username || !password) { formError = "Username dan password wajib diisi."; render(); return; }
+  formError = "Memeriksa…"; render();
+  const r = await apiGet("login", { mode: "pengurus", username, password });
+  if (!r.ok) { formError = r.error; render(); return; }
+  formError = "";
+  saveSession(r.user);
+  currentTab = session.peran === "admin" ? "akun" : "beranda";
+  render();
+  loadAndShow(currentTab);
+}
+async function doLoginWarga() {
+  const nama = document.getElementById("fNama").value.trim();
+  const nik = document.getElementById("fNik").value.trim();
+  if (!nama || !nik) { formError = "Nama dan NIK wajib diisi."; render(); return; }
+  formError = "Memeriksa…"; render();
+  const r = await apiGet("login", { mode: "warga", nama, nik });
+  if (!r.ok) { formError = r.error; render(); return; }
+  formError = "";
+  saveSession(r.user);
+  currentTab = "beranda";
+  render();
+  loadAndShow("beranda");
+}
+
+/* ---- warga ---- */
+async function openKK(no_kk) {
+  currentTab = "warga";
+  setScreen(screens.kkDetail(no_kk));
+  attachEvents();
+  const r = await apiGet("getAnggota", { no_kk });
+  const wrap = document.getElementById("kkAnggotaWrap");
+  if (!wrap) return;
+  if (!r.ok) { wrap.innerHTML = `<div class="err">${esc(r.error)}</div>`; return; }
+  const list = r.anggota;
+  wrap.innerHTML = list.length ? list.map(a => `
+    <div class="item">
+      <div class="row"><span class="item-title">${esc(a.nama)}</span><span class="item-sub">${esc(a.status_hubungan||'-')}</span></div>
+      <div class="item-sub">NIK ${esc(can.seeFullNik(no_kk) ? a.nik : maskNik(a.nik))} ${a.jenis_kelamin?('· '+esc(a.jenis_kelamin)):''} ${a.pekerjaan?('· '+esc(a.pekerjaan)):''}</div>
+      ${can.editWarga() ? `<div class="btn-row"><button class="btn outline sm" data-edit-anggota="${esc(a.nik)}">Ubah</button><button class="btn brick sm" data-del-anggota="${esc(a.nik)}">Hapus</button></div>` : ""}
+    </div>`).join("") : '<div class="empty">Belum ada anggota di KK ini.</div>';
+  Array.from(wrap.querySelectorAll("[data-edit-anggota]")).forEach(b => b.addEventListener("click", () => {
+    const a = list.find(x => String(x.nik) === b.dataset.editAnggota);
+    formError = ""; setScreen(anggotaForm(no_kk, a)); attachEvents();
+  }));
+  Array.from(wrap.querySelectorAll("[data-del-anggota]")).forEach(b => b.addEventListener("click", () => delAnggota(no_kk, b.dataset.delAnggota)));
+}
+async function submitKK() {
+  const no_kk = document.getElementById("fNoKK").value.trim();
+  const blok = document.getElementById("fBlok").value.trim();
+  const rows = Array.from(document.querySelectorAll(".kk-anggota-row")).map(row => ({
+    nama: row.querySelector(".fRowNama").value.trim(),
+    nik: row.querySelector(".fRowNik").value.trim(),
+    status_hubungan: row.querySelector(".fRowHubungan").value.trim()
+  }));
+  const first = rows[0] || {};
+  const extra = rows.slice(1).filter(a => a.nama || a.nik);
+  if (!no_kk) { formError = "No. KK wajib diisi."; setScreen(kkForm()); attachEvents(); return; }
+  if (!first.nama || !first.nik) { formError = "Nama dan NIK anggota pertama (Kepala Keluarga) wajib diisi."; setScreen(kkForm()); attachEvents(); return; }
+  const invalidExtra = extra.find(a => !a.nama || !a.nik);
+  if (invalidExtra) { formError = "Lengkapi Nama dan NIK untuk setiap anggota tambahan, atau hapus barisnya jika tidak dipakai."; setScreen(kkForm()); attachEvents(); return; }
+
+  const btn = document.getElementById("btnSimpanKK"); btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost("addAnggota", { no_kk, blok, nama: first.nama, nik: first.nik, status_hubungan: first.status_hubungan });
+  if (!r.ok) { formError = r.error; setScreen(kkForm()); attachEvents(); return; }
+
+  const warnings = [];
+  for (const a of extra) {
+    const rr = await apiPost("addAnggota", { no_kk, nama: a.nama, nik: a.nik, status_hubungan: a.status_hubungan });
+    if (!rr.ok) warnings.push(`${a.nama} (${a.nik}): ${rr.error}`);
+  }
+  formError = "";
+  await refreshWarga();
+  openKK(no_kk);
+  if (warnings.length) alert("KK tersimpan, tapi ada anggota yang gagal ditambahkan:\n" + warnings.join("\n") + "\nSilakan tambahkan manual lewat tombol \"+ Tambah anggota\" di halaman KK.");
+}
+async function submitAnggota() {
+  const btn = document.getElementById("btnSimpanAnggota");
+  const no_kk = btn.dataset.noKk, existing = btn.dataset.existing === "1";
+  const payload = {
+    no_kk, nama: document.getElementById("fNama").value.trim(), nik: document.getElementById("fNik").value.trim(),
+    jenis_kelamin: document.getElementById("fJk").value, ttl: document.getElementById("fTtl").value.trim(),
+    agama: document.getElementById("fAgama").value.trim(), pendidikan: document.getElementById("fPendidikan").value.trim(),
+    pekerjaan: document.getElementById("fPekerjaan").value.trim(), status_kawin: document.getElementById("fKawin").value.trim(),
+    status_hubungan: document.getElementById("fHubungan").value.trim(), nama_ayah: document.getElementById("fAyah").value.trim(),
+    nama_ibu: document.getElementById("fIbu").value.trim()
+  };
+  if (!existing) payload.blok = document.getElementById("fBlok").value.trim();
+  if (!payload.nama || !payload.nik) { formError = "Nama dan NIK wajib diisi."; setScreen(anggotaForm(no_kk, existing ? payload : null)); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost(existing ? "updateAnggota" : "addAnggota", payload);
+  if (!r.ok) { formError = r.error; setScreen(anggotaForm(no_kk, existing ? payload : null)); attachEvents(); return; }
+  formError = "";
+  await refreshWarga();
+  openKK(no_kk);
+}
+async function delAnggota(no_kk, nik) {
+  if (!confirm("Hapus anggota ini dari data warga?")) return;
+  const r = await apiPost("deleteAnggota", { nik });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshWarga();
+  openKK(no_kk);
+}
+async function delKK(no_kk) {
+  if (!confirm("Hapus KK ini beserta SEMUA anggotanya? Tindakan ini tidak bisa dibatalkan.")) return;
+  const r = await apiPost("deleteKK", { no_kk });
+  if (!r.ok) { alert(r.error); return; }
+  goTab("warga");
+}
+
+/* ---- kas (RT & Jimpitan) ---- */
+async function submitMutasi() {
+  const btn = document.getElementById("btnSimpanMutasi");
+  const id = btn.dataset.id;
+  const jenisKas = btn.dataset.jenisKas || "rt";
+  const payload = {
+    jenis_kas: jenisKas, tanggal: document.getElementById("fTanggal").value,
+    keterangan: document.getElementById("fKeterangan").value.trim(),
+    jenis: document.getElementById("fJenis").value,
+    jumlah: document.getElementById("fJumlah").value,
+    dicatat_oleh: session.nama
+  };
+  if (!payload.tanggal || !payload.keterangan || payload.jumlah === "") { formError = "Tanggal, keterangan, dan jumlah wajib diisi."; setScreen(mutasiForm(Object.assign({}, payload, { id }), jenisKas)); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  if (id) payload.id = id;
+  const r = await apiPost(id ? "updateKasMutasi" : "addKasMutasi", payload);
+  if (!r.ok) { formError = r.error; setScreen(mutasiForm(Object.assign({}, payload, { id }), jenisKas)); attachEvents(); return; }
+  formError = "";
+  currentTab = "kas";
+  await refreshKas(); setScreen(screens.kas());
+  attachEvents();
+}
+async function delMutasi(id, jenisKas) {
+  jenisKas = jenisKas || "rt";
+  if (!confirm("Hapus mutasi kas ini?")) return;
+  const r = await apiPost("deleteKasMutasi", { jenis_kas: jenisKas, id });
+  if (!r.ok) { alert(r.error); return; }
+  currentTab = "kas";
+  await refreshKas(); setScreen(screens.kas());
+  attachEvents();
+}
+
+/* ---- kelola akun ---- */
+function userForm() {
+  return `
+    <button class="back" data-back-tab="akun">‹ Batal</button>
+    <h2 class="title">Buat Akun Baru</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Nama</label><input id="fNama"></div>
+    <div class="field"><label>Peran</label>
+      <select id="fPeran">
+        <option value="ketua">Ketua RT</option><option value="sekretaris">Sekretaris RT</option>
+        <option value="bendahara">Bendahara RT</option><option value="kt_ketua">Ketua Karang Taruna</option>
+        <option value="kt_bendahara">Bendahara Karang Taruna</option><option value="kt_petugas">Petugas Jimpitan</option>
+        <option value="admin">Admin</option>
+      </select></div>
+    <div class="field"><label>Username</label><input id="fUsername"></div>
+    <div class="field"><label>Password awal</label><input id="fPassword" type="text"></div>
+    <button class="btn block" id="btnSimpanAkun">Simpan</button>`;
+}
+async function submitUser() {
+  const payload = {
+    nama: document.getElementById("fNama").value.trim(), peran: document.getElementById("fPeran").value,
+    username: document.getElementById("fUsername").value.trim(), password: document.getElementById("fPassword").value
+  };
+  if (!payload.nama || !payload.username || !payload.password) { formError = "Semua field wajib diisi."; setScreen(userForm()); attachEvents(); return; }
+  const r = await apiPost("createUser", payload);
+  if (!r.ok) { formError = r.error; setScreen(userForm()); attachEvents(); return; }
+  formError = "";
+  await refreshUsers();
+  setScreen(screens.akun()); attachEvents();
+}
+async function delUser(username) {
+  if (!confirm("Hapus akun ini?")) return;
+  const r = await apiPost("deleteUser", { username });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshUsers();
+  setScreen(screens.akun()); attachEvents();
+}
+async function resetPw(username) {
+  const pw = prompt("Password baru untuk @" + username + ":");
+  if (!pw) return;
+  const r = await apiPost("resetPassword", { username, newPassword: pw });
+  if (!r.ok) { alert(r.error); return; }
+  alert("Password direset.");
+}
+async function toggleUser(username, status) {
+  const newStatus = status.toLowerCase() === "nonaktif" ? "aktif" : "nonaktif";
+  const r = await apiPost("updateUser", { username, status_aktif: newStatus });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshUsers();
+  setScreen(screens.akun()); attachEvents();
+}
+
+/* ---- pengumuman ---- */
+async function submitPengumuman() {
+  const btn = document.getElementById("btnSimpanPengumuman");
+  const id = btn.dataset.id;
+  const payload = {
+    judul: document.getElementById("fJudul").value.trim(),
+    tanggal: document.getElementById("fTanggal").value,
+    tempat: document.getElementById("fTempat").value.trim(),
+    isi: document.getElementById("fIsi").value.trim()
+  };
+  if (!payload.judul || !payload.tanggal) { formError = "Judul dan tanggal wajib diisi."; setScreen(pengumumanForm(Object.assign({}, payload, { id }))); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  if (id) payload.id = id;
+  const r = await apiPost(id ? "updatePengumuman" : "addPengumuman", payload);
+  if (!r.ok) { formError = r.error; setScreen(pengumumanForm(Object.assign({}, payload, { id }))); attachEvents(); return; }
+  formError = "";
+  await refreshInfo();
+  setScreen(screens.info()); attachEvents();
+}
+async function delPengumuman(id) {
+  if (!confirm("Hapus pengumuman ini?")) return;
+  const r = await apiPost("deletePengumuman", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshInfo();
+  setScreen(screens.info()); attachEvents();
+}
+
+/* ---- surat ---- */
+async function submitSurat() {
+  const btn = document.getElementById("btnAjukanSurat");
+  const jenis_surat = btn.dataset.jenis;
+  const keperluan = document.getElementById("fKeperluan").value.trim();
+  if (!keperluan) { formError = "Keperluan wajib diisi."; setScreen(suratForm(jenis_surat)); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Mengirim…";
+  const r = await apiPost("addSurat", { jenis_surat, keperluan, nik_pemohon: session.nik, nama_pemohon: session.nama });
+  if (!r.ok) { formError = r.error; setScreen(suratForm(jenis_surat)); attachEvents(); return; }
+  formError = "";
+  await refreshSurat();
+  setScreen(screens.surat()); attachEvents();
+}
+async function prosesSurat(id, status, terbitkan) {
+  const payload = { id };
+  if (terbitkan) payload.terbitkan = true; else payload.status = status;
+  const r = await apiPost("updateSurat", payload);
+  if (!r.ok) { alert(r.error); return; }
+  await refreshSurat();
+  setScreen(screens.surat()); attachEvents();
+}
+async function delSurat(id) {
+  if (!confirm("Hapus pengajuan surat ini?")) return;
+  const r = await apiPost("deleteSurat", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshSurat();
+  setScreen(screens.surat()); attachEvents();
+}
+function cetakSurat(id) {
+  const s = cache.surat.find(x => x.id === id);
+  if (!s) return;
+  const w = window.open("", "_blank");
+  if (!w) { alert("Popup diblokir browser. Izinkan popup untuk mencetak surat."); return; }
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(s.nomor_surat||s.jenis_surat)}</title>
+    <style>
+      body{font-family:'Times New Roman',serif; padding:40px; color:#111; max-width:720px; margin:0 auto;}
+      .kop{text-align:center; border-bottom:3px solid #111; padding-bottom:10px; margin-bottom:24px;}
+      .kop h1{font-size:18px; margin:0;} .kop h2{font-size:15px; margin:2px 0 0; font-weight:normal;}
+      .judul{text-align:center; text-decoration:underline; font-weight:bold; margin:18px 0;}
+      .nomor{text-align:center; margin-bottom:20px;}
+      p{line-height:1.7; text-align:justify;}
+      table.data{margin:14px 0 20px; border-collapse:collapse;}
+      table.data td{padding:2px 8px;}
+      .ttd{margin-top:60px; text-align:right;}
+      .ttd .space{height:70px;}
+      @media print{ .noprint{display:none;} }
+    </style></head><body>
+    <div class="kop">
+      <h1>PENGURUS RUKUN TETANGGA (RT) 011</h1>
+      <h2>DUKUH TULUSARI — DESA KARANGWARU</h2>
+      <h2>KECAMATAN PLUPUH — KABUPATEN SRAGEN</h2>
+    </div>
+    <div class="judul">${esc(s.jenis_surat.toUpperCase())}</div>
+    <div class="nomor">Nomor: ${esc(s.nomor_surat||'-')}</div>
+    <p>Yang bertanda tangan di bawah ini, Ketua RT 011 Dukuh Tulusari, Desa Karangwaru, Kecamatan Plupuh, Kabupaten Sragen, menerangkan bahwa:</p>
+    <table class="data">
+      <tr><td>Nama</td><td>:</td><td>${esc(s.nama_pemohon)}</td></tr>
+      <tr><td>NIK</td><td>:</td><td>${esc(s.nik_pemohon)}</td></tr>
+    </table>
+    <p>Adalah benar warga Dukuh Tulusari RT 011. Surat ini diterbitkan untuk keperluan: <strong>${esc(s.keperluan)}</strong>.</p>
+    <p>Demikian surat ini dibuat untuk dipergunakan sebagaimana mestinya.</p>
+    <div class="ttd">
+      <div>Tulusari, ${esc(s.tanggal_terbit ? new Date(s.tanggal_terbit).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) : '')}</div>
+      <div>Ketua RT 011</div>
+      <div class="space"></div>
+      <div>(.............................)</div>
+    </div>
+    <div class="noprint" style="margin-top:30px; text-align:center;"><button onclick="window.print()">Cetak</button></div>
+    </body></html>`;
+  w.document.write(html);
+  w.document.close();
+}
+
+/* ---- pengaduan ---- */
+async function submitPengaduan() {
+  const btn = document.getElementById("btnKirimPengaduan");
+  const judul = document.getElementById("fJudul").value.trim();
+  const deskripsi = document.getElementById("fDeskripsi").value.trim();
+  if (!judul || !deskripsi) { formError = "Judul dan deskripsi wajib diisi."; setScreen(pengaduanForm()); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Mengirim…";
+  const r = await apiPost("addPengaduan", { judul, deskripsi, pelapor: session.nama, nik_pelapor: session.nik });
+  if (!r.ok) { formError = r.error; setScreen(pengaduanForm()); attachEvents(); return; }
+  formError = "";
+  await refreshPengaduan();
+  setScreen(screens.pengaduan()); attachEvents();
+}
+async function prosesPengaduan(id, status) {
+  const r = await apiPost("updatePengaduan", { id, status });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshPengaduan();
+  setScreen(screens.pengaduan()); attachEvents();
+}
+async function delPengaduan(id) {
+  if (!confirm("Hapus pengaduan ini?")) return;
+  const r = await apiPost("deletePengaduan", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshPengaduan();
+  setScreen(screens.pengaduan()); attachEvents();
+}
+
+/* ---- karang taruna ---- */
+async function submitKT() {
+  const btn = document.getElementById("btnSimpanKT");
+  const id = btn.dataset.id;
+  const payload = {
+    nama: document.getElementById("fNama").value.trim(),
+    peran: document.getElementById("fPeran").value.trim(),
+    no_hp: document.getElementById("fNoHp").value.trim()
+  };
+  const statusEl = document.getElementById("fStatusAktif");
+  if (statusEl) payload.status_aktif = statusEl.value;
+  if (!payload.nama) { formError = "Nama wajib diisi."; setScreen(ktForm(Object.assign({}, payload, { id }))); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  if (id) payload.id = id;
+  const r = await apiPost(id ? "updateKarangTaruna" : "addKarangTaruna", payload);
+  if (!r.ok) { formError = r.error; setScreen(ktForm(Object.assign({}, payload, { id }))); attachEvents(); return; }
+  formError = "";
+  await refreshKT();
+  setScreen(screens.kt()); attachEvents();
+}
+async function delKT(id) {
+  if (!confirm("Hapus anggota ini?")) return;
+  const r = await apiPost("deleteKarangTaruna", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshKT();
+  setScreen(screens.kt()); attachEvents();
+}
+
+/* ---- kontak ---- */
+async function submitKontak() {
+  const btn = document.getElementById("btnSimpanKontak");
+  const id = btn.dataset.id;
+  const payload = {
+    nama: document.getElementById("fNama").value.trim(),
+    peran: document.getElementById("fPeran").value.trim(),
+    no_hp: document.getElementById("fNoHp").value.trim()
+  };
+  if (!payload.nama || !payload.no_hp) { formError = "Nama dan No. HP wajib diisi."; setScreen(kontakForm(Object.assign({}, payload, { id }))); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  if (id) payload.id = id;
+  const r = await apiPost(id ? "updateKontak" : "addKontak", payload);
+  if (!r.ok) { formError = r.error; setScreen(kontakForm(Object.assign({}, payload, { id }))); attachEvents(); return; }
+  formError = "";
+  await refreshKontak();
+  setScreen(screens.kontak()); attachEvents();
+}
+async function delKontak(id) {
+  if (!confirm("Hapus kontak ini?")) return;
+  const r = await apiPost("deleteKontak", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshKontak();
+  setScreen(screens.kontak()); attachEvents();
+}
+
+/* ---- iuran RT ---- */
+async function submitPertemuan() {
+  const btn = document.getElementById("btnSimpanPertemuan");
+  const payload = {
+    tanggal: document.getElementById("fTanggal").value,
+    keterangan: document.getElementById("fKeterangan").value.trim(),
+    nominal_default: document.getElementById("fNominal").value
+  };
+  if (!payload.tanggal) { formError = "Tanggal wajib diisi."; setScreen(pertemuanForm()); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost("addPertemuanRT", payload);
+  if (!r.ok) { formError = r.error; setScreen(pertemuanForm()); attachEvents(); return; }
+  formError = "";
+  currentTab = "iuranrt";
+  await refreshPertemuanRT(); setScreen(screens.iuranrt()); attachEvents();
+}
+let currentPertemuanId = null;
+async function openPertemuan(id) {
+  currentTab = "iuranrtDetail";
+  currentPertemuanId = id;
+  const p = cache.pertemuan.find(x => x.id === id);
+  if (!p) return;
+  setScreen('<div class="empty">Memuat…</div>');
+  await refreshIuranRT(id);
+  setScreen(screens.iuranrtDetail(p));
+  attachEvents();
+}
+async function reloadPertemuanDetail() {
+  await refreshPertemuanRT();
+  await refreshIuranRT(currentPertemuanId);
+  const pertemuan = cache.pertemuan.find(x => x.id === currentPertemuanId);
+  setScreen(screens.iuranrtDetail(pertemuan)); attachEvents();
+}
+async function toggleIuran(id, status) {
+  const r = await apiPost("updateIuranRT", { id, status });
+  if (!r.ok) { alert(r.error); return; }
+  await reloadPertemuanDetail();
+}
+async function tutupPertemuan(id) {
+  if (!confirm("Tutup pertemuan ini dan posting total KK yang lunas sebagai 1 mutasi masuk ke Kas RT? Tindakan ini tidak bisa dibatalkan.")) return;
+  const r = await apiPost("tutupPertemuanRT", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await reloadPertemuanDetail();
+  alert(r.message);
+}
+async function bayarTunggakan(no_kk) {
+  if (!confirm("Tandai semua tunggakan KK ini lunas dan catat masuk sebagai 1 mutasi di Kas RT sekarang?")) return;
+  const r = await apiPost("bayarTunggakanRT", { no_kk });
+  if (!r.ok) { alert(r.error); return; }
+  if (currentTab === "iuranrtDetail" && currentPertemuanId) await reloadPertemuanDetail();
+  else { await refreshTunggakanRT(); setScreen(screens.tunggakan()); attachEvents(); }
+  alert(r.message);
+}
+
+/* ---- jimpitan ---- */
+async function submitJimpitan() {
+  const btn = document.getElementById("btnSimpanJimpitan");
+  const pilih = document.getElementById("fRumahPilih").value;
+  let blok, no_rumah;
+  if (pilih && pilih !== "__manual__") { [blok, no_rumah] = pilih.split("|"); }
+  else { blok = document.getElementById("fBlok").value.trim(); no_rumah = document.getElementById("fNoRumah").value.trim(); }
+  const payload = {
+    tanggal: document.getElementById("fTanggal").value, blok, no_rumah,
+    jumlah: document.getElementById("fJumlah").value,
+    catatan: document.getElementById("fCatatan").value.trim()
+  };
+  if (!payload.tanggal || !payload.blok || !payload.no_rumah) { formError = "Tanggal dan rumah (blok + no. rumah) wajib diisi."; setScreen(jimpitanForm()); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost("addJimpitanLog", payload);
+  if (!r.ok) { formError = r.error; setScreen(jimpitanForm()); attachEvents(); return; }
+  formError = "";
+  currentTab = "jimpitan";
+  await refreshJimpitanLog(); setScreen(screens.jimpitan()); attachEvents();
+}
+async function delJimpitan(id) {
+  if (!confirm("Hapus log jimpitan ini?")) return;
+  const r = await apiPost("deleteJimpitanLog", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshJimpitanLog(); setScreen(screens.jimpitan()); attachEvents();
+}
+async function postingJimpitan() {
+  const ids = Array.from(document.querySelectorAll(".jimpitan-check:checked")).map(c => c.value);
+  if (!ids.length) { alert("Pilih minimal satu log jimpitan untuk diposting."); return; }
+  if (!confirm("Posting " + ids.length + " log terpilih sebagai 1 mutasi masuk ke Kas Jimpitan? Setelah diposting, log ini tidak bisa diubah/dihapus lagi.")) return;
+  const r = await apiPost("postJimpitanLog", { ids });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshJimpitanLog(); setScreen(screens.jimpitan()); attachEvents();
+  alert(r.message);
+}
+
+/* ---- inventaris ---- */
+async function submitInventaris() {
+  const btn = document.getElementById("btnSimpanInventaris");
+  const existing = btn.dataset.existing === "1";
+  const payload = {
+    nama_barang: document.getElementById("fNama").value.trim(),
+    kategori: document.getElementById("fKategori").value,
+    jumlah: document.getElementById("fJumlah").value,
+    kondisi: document.getElementById("fKondisi").value,
+    lokasi: document.getElementById("fLokasi").value.trim(),
+    catatan: document.getElementById("fCatatan").value.trim()
+  };
+  if (!payload.nama_barang) { formError = "Nama barang wajib diisi."; setScreen(inventarisForm(existing ? payload : null)); attachEvents(); return; }
+  if (existing) payload.id = btn.dataset.id;
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost(existing ? "updateInventaris" : "addInventaris", payload);
+  if (!r.ok) { formError = r.error; setScreen(inventarisForm(existing ? payload : null)); attachEvents(); return; }
+  formError = "";
+  currentTab = "inventaris";
+  await refreshInventaris(); setScreen(screens.inventaris()); attachEvents();
+}
+async function delInventaris(id) {
+  if (!confirm("Hapus barang ini dari inventaris?")) return;
+  const r = await apiPost("deleteInventaris", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshInventaris(); setScreen(screens.inventaris()); attachEvents();
+}
+
+/* ====================== MULAI ====================== */
+if (session && session.peran === "admin") currentTab = "akun";
+render();
+if (session) loadAndShow(currentTab);
+</script>
+</body>
+</html>

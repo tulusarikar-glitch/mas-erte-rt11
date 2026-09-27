@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jimpitan Squad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+:root{
+  --bg:#EEF1E7; --surface:#FFFFFF; --ink:#20261D; --sub:#5B6353;
+  --green:#1F4D3A; --green-light:#3E7A5C; --gold:#B98A2E; --brick:#A24B3E;
+  --line:#DCE1D2; --nav-bg:#FFFFFF;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121A15; --surface:#1B241D; --ink:#EAEDE4; --sub:#9BA694;
+    --green:#4C8A6B; --green-light:#6BAE8B; --gold:#D6AE5C; --brick:#C97A6A;
+    --line:#2B362B; --nav-bg:#1B241D;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121A15; --surface:#1B241D; --ink:#EAEDE4; --sub:#9BA694;
+  --green:#4C8A6B; --green-light:#6BAE8B; --gold:#D6AE5C; --brick:#C97A6A;
+  --line:#2B362B; --nav-bg:#1B241D;
+}
+*{box-sizing:border-box;}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+body{
+  margin:0; min-height:100dvh; background:var(--bg); color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif; display:flex; justify-content:center;
+  padding:24px 12px;
+}
+.phone{
+  width:100%; max-width:420px; background:var(--surface); min-height:calc(100dvh - 48px);
+  border-radius:28px; overflow:hidden; display:flex; flex-direction:column;
+  box-shadow:0 20px 50px rgba(20,30,20,.18); border:1px solid var(--line);
+}
+header{ background:var(--gold); color:#fff; padding:20px 20px 16px; position:sticky; top:0; z-index:5; }
+header .brand{font-family:'Fraunces',serif; font-weight:600; font-size:20px; letter-spacing:.2px;}
+header .place{font-size:12.5px; opacity:.9; margin-top:2px;}
+header .who{display:flex; align-items:center; justify-content:space-between; margin-top:12px; gap:10px;}
+header .who .name{font-size:13px; font-weight:600;}
+header .who .role{font-size:11px; opacity:.9;}
+header .logout{background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.35); color:#fff; font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:8px; cursor:pointer; font-family:inherit;}
+main{flex:1; overflow-y:auto; padding:18px 16px 90px;}
+h2.title{font-family:'Fraunces',serif; font-weight:600; font-size:19px; margin:2px 0 14px; color:var(--ink);}
+.card{ background:var(--bg); border:1px solid var(--line); border-radius:16px; padding:14px 16px; margin-bottom:12px; }
+.card + .card{margin-top:10px;}
+.row{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+.label{font-size:12.5px; color:var(--sub);}
+.value-lg{font-family:'Fraunces',serif; font-size:26px; font-weight:600; margin-top:2px;}
+.stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+.stat{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px;}
+.stat .n{font-family:'Fraunces',serif; font-size:22px; font-weight:600;}
+.stat .l{font-size:12px; color:var(--sub); margin-top:2px;}
+.item{padding:11px 0; border-bottom:1px solid var(--line);}
+.item:last-child{border-bottom:none;}
+.item-title{font-weight:600; font-size:14.5px;}
+.item-sub{font-size:12.5px; color:var(--sub); margin-top:2px; line-height:1.5;}
+.badge{display:inline-block; font-size:11px; padding:3px 9px; border-radius:99px; font-weight:600;}
+.badge.ok{background:#DCEBE0; color:var(--green);}
+.badge.wait{background:#F3E6C9; color:#8A6417;}
+.badge.due{background:#F3DCD8; color:var(--brick);}
+@media (prefers-color-scheme: dark){ .badge.ok{background:#1E3A2A;} .badge.wait{background:#3B3116;} .badge.due{background:#3C2521;} }
+.btn{ display:inline-block; background:var(--green); color:#fff; border:none; padding:10px 16px; border-radius:11px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; }
+.btn.outline{background:transparent; color:var(--green); border:1px solid var(--green);}
+.btn.gold{background:var(--gold);}
+.btn.brick{background:var(--brick);}
+.btn.block{width:100%; text-align:center;}
+.btn.sm{padding:6px 10px; font-size:12px; border-radius:8px;}
+.btn:disabled{opacity:.6; cursor:default;}
+.btn-row{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+.list-link{ display:flex; justify-content:space-between; align-items:center; padding:14px 4px; border-bottom:1px solid var(--line); cursor:pointer; background:none; border-left:none; border-right:none; border-top:none; width:100%; text-align:left; font-family:inherit; color:var(--ink); }
+.list-link:last-child{border-bottom:none;}
+.list-link .name{font-weight:600; font-size:14.5px;}
+.list-link .desc{font-size:12px; color:var(--sub); margin-top:1px;}
+.list-link .chev{color:var(--sub); font-size:16px;}
+.back{ background:none; border:none; color:var(--ink); font-size:14px; font-weight:600; cursor:pointer; padding:0 0 14px; display:flex; align-items:center; gap:6px; font-family:inherit; }
+.section-tag{font-size:11.5px; color:var(--gold); font-weight:700; margin-bottom:4px;}
+nav{ position:sticky; bottom:0; background:var(--nav-bg); border-top:1px solid var(--line); display:flex; padding:8px 4px calc(8px + env(safe-area-inset-bottom,0px)); }
+nav button{ flex:1; background:none; border:none; font-family:inherit; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; color:var(--sub); font-size:11px; font-weight:600; }
+nav button.active{color:var(--gold);}
+nav button .ic{font-size:19px;}
+.empty{text-align:center; padding:30px 10px; color:var(--sub); font-size:13.5px;}
+.geo{font-size:11px; color:var(--sub); margin-top:2px;}
+.field{margin-bottom:12px;}
+.field label{display:block; font-size:12px; font-weight:600; color:var(--sub); margin-bottom:4px;}
+.field label .opt{font-weight:400; font-style:italic; color:var(--sub);}
+.field input, .field select, .field textarea{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-family:inherit; font-size:13.5px; }
+.field input:focus, .field select:focus{outline:2px solid var(--gold);}
+.err{background:#F3DCD8; color:var(--brick); border-radius:10px; padding:10px 12px; font-size:12.5px; margin-bottom:12px; font-weight:600;}
+.msg-ok{background:#DCEBE0; color:var(--green); border-radius:10px; padding:10px 12px; font-size:12.5px; margin-bottom:12px; font-weight:600;}
+.login-wrap{min-height:calc(100dvh - 48px); display:flex; flex-direction:column; justify-content:center; padding:28px 26px;}
+.login-brand{font-family:'Fraunces',serif; font-weight:700; font-size:26px; color:var(--gold); margin-bottom:2px;}
+.login-place{font-size:12.5px; color:var(--sub); margin-bottom:22px;}
+.mask-note{font-size:11px; color:var(--sub); margin-top:2px;}
+/* scanner */
+.scan-wrap{position:relative; border-radius:16px; overflow:hidden; background:#000; aspect-ratio:1/1;}
+.scan-wrap video{width:100%; height:100%; object-fit:cover;}
+.scan-frame{position:absolute; inset:14%; border:3px solid var(--gold); border-radius:16px; box-shadow:0 0 0 999px rgba(0,0,0,.35);}
+.scan-hint{position:absolute; bottom:10px; left:0; right:0; text-align:center; color:#fff; font-size:12px; font-weight:600; text-shadow:0 1px 3px rgba(0,0,0,.6);}
+.rumah-check{margin-right:8px;}
+</style>
+</head>
+<body>
+<div class="phone" id="phone"></div>
+
+<script>
+/* ====================== KONFIGURASI ====================== */
+const API_URL = "https://script.google.com/macros/s/AKfycbwp520IuPJE_K9XwIueQpw4w5756FWGEsdxqRubYIoAAR5NudNqX9zieLOmLzYHyD7IUg/exec";
+const API_KEY = "gampangwae"; // harus SAMA dengan API_KEY di Code.gs
+
+/* ====================== HELPER API ====================== */
+async function apiGet(action, params) {
+  const aktor = (session && session.username) || "";
+  const q = new URLSearchParams(Object.assign({ action, apiKey: API_KEY, aktor }, params || {}));
+  const res = await fetch(API_URL + "?" + q.toString());
+  return res.json();
+}
+async function apiPost(action, body) {
+  const aktor = (session && session.username) || "";
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(Object.assign({ action, apiKey: API_KEY, aktor }, body || {}))
+  });
+  return res.json();
+}
+const rupiah = n => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
+function fmtWaktu(v) {
+  if (!v) return "-";
+  const d = new Date(v);
+  if (isNaN(d)) return String(v);
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) + " · " + d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+}
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+/* ====================== SESI ====================== */
+let session = null;
+try { const raw = localStorage.getItem("jimpitansquad_session"); if (raw) session = JSON.parse(raw); } catch (e) {}
+function saveSession(s) { session = s; try { localStorage.setItem("jimpitansquad_session", JSON.stringify(s)); } catch (e) {} }
+function clearSession() { session = null; try { localStorage.removeItem("jimpitansquad_session"); } catch (e) {} }
+
+const ALLOWED_ROLES = ["ketua", "kt_ketua", "kt_bendahara", "kt_petugas"];
+const ROLE_LABEL = { ketua: "Ketua RT", kt_ketua: "Ketua Karang Taruna", kt_bendahara: "Bendahara Karang Taruna", kt_petugas: "Petugas Jimpitan" };
+const can = {
+  input: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_petugas"),
+  post: () => session && (session.peran === "ketua" || session.peran === "kt_bendahara"),
+  viewKas: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_bendahara"),
+};
+
+/* ====================== STATE ====================== */
+let currentTab = "beranda";
+let cache = { rumah: [], log: [], totalBelum: 0, kas: { mutasi: [], saldo: 0 } };
+let formError = "";
+let scanState = { stream: null, raf: null, found: null };
+
+function render() {
+  const el = document.getElementById("phone");
+  el.innerHTML = session ? appShell() : loginScreen();
+  attachEvents();
+}
+
+/* ====================== LOGIN ====================== */
+function loginScreen() {
+  return `
+    <div class="login-wrap">
+      <div class="login-brand">Jimpitan Squad</div>
+      <div class="login-place">Karang Taruna Tulusari · RT 11, Karangwaru</div>
+      ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+      <div class="field"><label>Username</label><input id="fUsername" autocomplete="username"></div>
+      <div class="field"><label>Password</label><input id="fPassword" type="password" autocomplete="current-password"></div>
+      <button class="btn gold block" id="btnLogin">Masuk</button>
+      <p class="mask-note" style="margin-top:16px">Khusus akun Karang Taruna (Ketua, Bendahara, Petugas Jimpitan). Untuk Warga/Pengurus RT lain, gunakan Mas eRTe Mobile.</p>
+    </div>`;
+}
+async function doLogin() {
+  const username = document.getElementById("fUsername").value.trim();
+  const password = document.getElementById("fPassword").value;
+  if (!username || !password) { formError = "Username dan password wajib diisi."; render(); return; }
+  formError = "Memeriksa…"; render();
+  const r = await apiGet("login", { mode: "pengurus", username, password });
+  if (!r.ok) { formError = r.error; render(); return; }
+  if (ALLOWED_ROLES.indexOf(r.user.peran) === -1) { formError = "Akun ini bukan akun Karang Taruna. Gunakan Mas eRTe Mobile untuk peran ini."; render(); return; }
+  formError = "";
+  saveSession(r.user);
+  currentTab = "beranda";
+  render();
+  loadAndShow("beranda");
+}
+
+/* ====================== SHELL ====================== */
+function appShell() {
+  const tabs = [["beranda","🏠","Beranda"]];
+  if (can.input()) tabs.push(["ambil","📷","Ambil"]);
+  tabs.push(["riwayat","🗒️","Riwayat"]);
+  if (can.post()) tabs.push(["tinjau","✅","Tinjau"]);
+  if (can.viewKas()) tabs.push(["kas","💰","Kas"]);
+  return `
+    <header>
+      <div class="brand">Jimpitan Squad</div>
+      <div class="place">Karang Taruna Tulusari · RT 11, Karangwaru</div>
+      <div class="who">
+        <div><div class="name">${esc(session.nama)}</div><div class="role">${esc(ROLE_LABEL[session.peran] || session.peran)}</div></div>
+        <button class="logout" id="btnLogout">Keluar</button>
+      </div>
+    </header>
+    <main id="screen">Memuat…</main>
+    <nav id="navbar">
+      ${tabs.map(([t,ic,label]) => `<button data-tab="${t}" class="${currentTab===t?'active':''}"><span class="ic">${ic}</span>${label}</button>`).join("")}
+    </nav>`;
+}
+function setScreen(html) { const s = document.getElementById("screen"); if (s) s.innerHTML = html; }
+
+/* ====================== NAVIGASI & DATA ====================== */
+async function goTab(tab) { stopScanner(); currentTab = tab; render(); await loadAndShow(tab); }
+async function loadAndShow(tab) {
+  setScreen('<div class="empty">Memuat…</div>');
+  try {
+    if (tab === "beranda") { await refreshAll(); setScreen(screens.beranda()); }
+    else if (tab === "ambil") { await refreshRumah(); setScreen(screens.ambil()); }
+    else if (tab === "riwayat") { await refreshLog(); setScreen(screens.riwayat()); }
+    else if (tab === "tinjau") { await refreshLog(); setScreen(screens.tinjau()); }
+    else if (tab === "kas") { await refreshKas(); setScreen(screens.kas()); }
+  } catch (err) { setScreen(`<div class="err">Gagal memuat data: ${esc(err.message)}</div>`); }
+  attachEvents();
+}
+async function refreshRumah() { const r = await apiGet("getRumah"); if (r.ok) cache.rumah = r.rumah; }
+async function refreshLog() { const r = await apiGet("getJimpitanLog"); if (!r.ok) throw new Error(r.error); cache.log = r.log; cache.totalBelum = r.total_belum_posting; }
+async function refreshKas() { const r = await apiGet("getKas", { jenis_kas: "jimpitan" }); if (!r.ok) throw new Error(r.error); cache.kas = r; }
+async function refreshAll() { await Promise.all([refreshLog(), can.viewKas() ? refreshKas() : Promise.resolve()]); }
+
+/* ====================== LAYAR ====================== */
+const screens = {
+  beranda(){
+    const today = new Date().toDateString();
+    const punyaHariIni = cache.log.filter(l => new Date(l.tanggal).toDateString() === today);
+    return `
+      <div class="section-tag">RINGKASAN</div>
+      <h2 class="title">Halo, ${esc(session.nama)}</h2>
+      <div class="stat-grid">
+        <div class="stat"><div class="n">${punyaHariIni.length}</div><div class="l">Rumah tercatat hari ini</div></div>
+        <div class="stat"><div class="n">${rupiah(cache.totalBelum)}</div><div class="l">Belum diposting</div></div>
+      </div>
+      ${can.viewKas() ? `<div class="card"><div class="label">Saldo Kas Jimpitan</div><div class="value-lg">${rupiah(cache.kas.saldo)}</div></div>` : ""}
+      ${can.input() ? '<button class="btn gold block" id="btnKeAmbil">📷 Ambil Jimpitan Sekarang</button>' : ""}
+      <div class="mask-note" style="margin-top:14px">Rp500/rumah/hari. Log tercatat dulu di sini, resmi masuk saldo Kas Jimpitan setelah ditinjau &amp; diposting oleh Ketua/Bendahara Karang Taruna.</div>`;
+  },
+
+  ambil(){
+    return `
+      <div class="section-tag">AMBIL JIMPITAN</div>
+      <h2 class="title">Pilih Rumah</h2>
+      <div id="scanArea"></div>
+      <button class="btn gold block" id="btnMulaiScan" style="margin-top:${document.getElementById('scanArea')?'0':'0'}px">📷 Scan QR Rumah</button>
+      <h2 class="title" style="margin-top:18px; font-size:16px">Atau pilih manual</h2>
+      <div class="card" style="padding:4px 12px; max-height:340px; overflow-y:auto">
+        ${cache.rumah.length ? cache.rumah.map(r => `
+          <button class="list-link" data-pilih-rumah="${esc(r.blok)}|${esc(r.no_rumah)}">
+            <span class="txt"><div class="name">Blok ${esc(r.blok)} / No. ${esc(r.no_rumah)}</div><div class="desc">${r.jumlah_kk} KK di rumah ini</div></span>
+            <span class="chev">›</span>
+          </button>`).join("") : '<div class="empty">Data rumah belum ada (belum ada alamat di Data Warga).</div>'}
+      </div>`;
+  },
+
+  konfirmasi(blok, no_rumah, opts) {
+    const o = opts || {};
+    return `
+      <button class="back" data-back-tab="ambil">‹ Batal</button>
+      <h2 class="title">Konfirmasi Setoran</h2>
+      ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+      <div class="card">
+        <div class="row"><span class="label">Rumah</span></div>
+        <div class="item-title" style="margin-top:2px; font-size:18px">Blok ${esc(blok)} / No. ${esc(no_rumah)}</div>
+        <div class="geo" id="geoStatus">📍 ${o.geo ? esc(o.geo) : "Mengambil lokasi GPS…"}</div>
+      </div>
+      <div class="field"><label>Jumlah (Rp)</label><input id="fJumlah" type="number" value="${o.jumlah||500}"></div>
+      <div class="field"><label>Catatan <span class="opt">(opsional)</span></label><input id="fCatatan" placeholder="mis. dititip tetangga"></div>
+      <button class="btn block" id="btnSimpanScan">Simpan</button>`;
+  },
+
+  riwayat(){
+    const mine = session.peran === "kt_petugas" ? cache.log : cache.log.filter(l => l.dicatat_oleh === session.username);
+    const list = session.peran === "kt_petugas" ? cache.log : mine; // server sudah filter utk kt_petugas
+    return `
+      <div class="section-tag">RIWAYAT SAYA</div>
+      <h2 class="title">Riwayat Scan</h2>
+      <div class="card">
+        ${list.length ? list.map(l => `
+          <div class="item">
+            <div class="row"><span class="item-title">Blok ${esc(l.blok)} / No. ${esc(l.no_rumah)}</span>
+              ${String(l.status).toLowerCase()==='sudah_posting' ? '<span class="badge ok">Sudah posting</span>' : '<span class="badge wait">Menunggu</span>'}</div>
+            <div class="item-sub">${fmtWaktu(l.tanggal)} · ${rupiah(l.jumlah)}${l.catatan ? (' · '+esc(l.catatan)) : ''}</div>
+            ${l.latitude ? `<div class="geo">📍 ${esc(l.latitude)}, ${esc(l.longitude)}</div>` : ''}
+          </div>`).join("") : '<div class="empty">Belum ada riwayat scan.</div>'}
+      </div>`;
+  },
+
+  tinjau(){
+    const belum = cache.log.filter(l => String(l.status||'belum_posting').toLowerCase() !== 'sudah_posting');
+    return `
+      <div class="section-tag">TINJAU &amp; POSTING</div>
+      <h2 class="title">Log Menunggu Posting</h2>
+      <div class="card"><div class="label">Total menunggu</div><div class="value-lg">${rupiah(cache.totalBelum)}</div></div>
+      <button class="btn block" id="btnPosting" ${belum.length?'':'disabled'}>Posting terpilih ke Kas Jimpitan</button>
+      <div class="card" style="margin-top:14px">
+        ${belum.length ? belum.map(l => `
+          <div class="item">
+            <div class="row"><span><input type="checkbox" class="log-check" value="${esc(l.id)}" checked style="margin-right:8px">Blok ${esc(l.blok)} / No. ${esc(l.no_rumah)}</span>
+              <span style="font-weight:700; font-size:13.5px">${rupiah(l.jumlah)}</span></div>
+            <div class="item-sub">${fmtWaktu(l.tanggal)} · dicatat ${esc(l.dicatat_oleh)}</div>
+            <div class="btn-row"><button class="btn brick sm" data-del-log="${esc(l.id)}">Hapus</button></div>
+          </div>`).join("") : '<div class="empty">Tidak ada log yang menunggu posting.</div>'}
+      </div>`;
+  },
+
+  kas(){
+    const editable = session.peran === "ketua" || session.peran === "kt_bendahara";
+    return `
+      <div class="section-tag">KAS JIMPITAN</div>
+      <h2 class="title">Saldo &amp; Mutasi</h2>
+      <div class="card"><div class="label">Saldo saat ini</div><div class="value-lg">${rupiah(cache.kas.saldo)}</div></div>
+      ${editable ? '<button class="btn outline block" id="btnTambahMutasiKas">+ Catatan lain (di luar jimpitan)</button>' : ''}
+      <h2 class="title" style="margin-top:18px; font-size:16px">Mutasi</h2>
+      <div class="card">
+        ${cache.kas.mutasi.length ? cache.kas.mutasi.map(m => `
+          <div class="item row">
+            <div><div class="item-title">${esc(m.keterangan)}</div><div class="item-sub">${fmtWaktu(m.tanggal)} · ${esc(m.dicatat_oleh||'-')}</div></div>
+            <div style="color:${String(m.jenis).toLowerCase()==='masuk'?'var(--green)':'var(--brick)'}; font-weight:700; font-size:13.5px; white-space:nowrap">${String(m.jenis).toLowerCase()==='masuk'?'+':'-'} ${rupiah(m.jumlah)}</div>
+          </div>`).join("") : '<div class="empty">Belum ada mutasi.</div>'}
+      </div>`;
+  }
+};
+
+function mutasiKasForm() {
+  const today = new Date().toISOString().slice(0,10);
+  return `
+    <button class="back" data-back-tab="kas">‹ Batal</button>
+    <h2 class="title">Catatan Kas Jimpitan</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Tanggal</label><input id="fTanggal" type="date" value="${today}"></div>
+    <div class="field"><label>Keterangan</label><input id="fKeterangan" placeholder="mis. iuran kegiatan 17 Agustus"></div>
+    <div class="field"><label>Jenis</label><select id="fJenis"><option value="masuk">Pemasukan</option><option value="keluar">Pengeluaran</option></select></div>
+    <div class="field"><label>Jumlah (Rp)</label><input id="fJumlah2" type="number" min="0"></div>
+    <button class="btn block" id="btnSimpanMutasiKas">Simpan</button>`;
+}
+
+/* ====================== SCANNER QR ====================== */
+function parseQR(text) {
+  text = String(text || "").trim();
+  let m = text.match(/RUMAH[:\|]\s*([^\/\|]+)[\/\|]\s*(.+)/i);
+  if (m) return { blok: m[1].trim(), no_rumah: m[2].trim() };
+  try {
+    const j = JSON.parse(text);
+    if (j.blok && (j.no_rumah || j.no)) return { blok: String(j.blok), no_rumah: String(j.no_rumah || j.no) };
+  } catch (e) {}
+  m = text.match(/^([A-Za-z0-9]+)[\/\-]([A-Za-z0-9]+)$/);
+  if (m) return { blok: m[1], no_rumah: m[2] };
+  return null;
+}
+async function startScanner() {
+  const area = document.getElementById("scanArea");
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    area.innerHTML = '<div class="err">Kamera tidak tersedia di browser ini. Gunakan pilih rumah manual di bawah.</div>';
+    return;
+  }
+  if (typeof jsQR === "undefined") {
+    area.innerHTML = '<div class="err">Pustaka pemindai QR gagal dimuat (perlu koneksi internet saat membuka halaman ini). Gunakan pilih rumah manual di bawah.</div>';
+    return;
+  }
+  area.innerHTML = `<div class="scan-wrap"><video id="scanVideo" playsinline autoplay muted></video><div class="scan-frame"></div><div class="scan-hint">Arahkan ke stiker QR rumah</div></div>
+    <button class="btn outline block" id="btnBatalScan" style="margin-top:10px">Batal</button>`;
+  document.getElementById("btnBatalScan").addEventListener("click", () => { stopScanner(); setScreen(screens.ambil()); attachEvents(); });
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    scanState.stream = stream;
+    const video = document.getElementById("scanVideo");
+    video.srcObject = stream;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const tick = () => {
+      if (!scanState.stream) return;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height);
+        if (code && code.data) {
+          const parsed = parseQR(code.data);
+          stopScanner();
+          if (parsed) pilihRumah(parsed.blok, parsed.no_rumah);
+          else { setScreen(screens.ambil()); attachEvents(); alert("QR terbaca tapi formatnya tidak dikenali: \\n\\n" + code.data + "\\n\\nSilakan pilih rumah manual, atau minta stiker QR dicetak ulang sesuai format yang didukung."); }
+          return;
+        }
+      }
+      scanState.raf = requestAnimationFrame(tick);
+    };
+    scanState.raf = requestAnimationFrame(tick);
+  } catch (err) {
+    area.innerHTML = `<div class="err">Tidak bisa mengakses kamera: ${esc(err.message)}. Pastikan halaman dibuka lewat HTTPS dan izin kamera diberikan, atau gunakan pilih rumah manual di bawah.</div>`;
+  }
+}
+function stopScanner() {
+  if (scanState.raf) cancelAnimationFrame(scanState.raf);
+  if (scanState.stream) scanState.stream.getTracks().forEach(t => t.stop());
+  scanState.raf = null; scanState.stream = null;
+}
+function pilihRumah(blok, no_rumah) {
+  setScreen(screens.konfirmasi(blok, no_rumah, {}));
+  attachEvents();
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => { scanState.found = { lat: pos.coords.latitude, lng: pos.coords.longitude }; const g = document.getElementById("geoStatus"); if (g) g.innerHTML = "📍 " + pos.coords.latitude.toFixed(5) + ", " + pos.coords.longitude.toFixed(5); },
+      () => { scanState.found = null; const g = document.getElementById("geoStatus"); if (g) g.innerHTML = "📍 Lokasi tidak tersedia (tetap bisa disimpan)"; },
+      { timeout: 8000 }
+    );
+  } else {
+    scanState.found = null;
+  }
+}
+
+/* ====================== SUBMIT ====================== */
+async function submitScan(blok, no_rumah) {
+  const btn = document.getElementById("btnSimpanScan");
+  const jumlah = document.getElementById("fJumlah").value;
+  const catatan = document.getElementById("fCatatan").value.trim();
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const payload = {
+    tanggal: new Date().toISOString(), blok, no_rumah, jumlah, catatan,
+    sumber: scanState.viaScan ? "qr" : "manual",
+    latitude: scanState.found ? scanState.found.lat : "", longitude: scanState.found ? scanState.found.lng : ""
+  };
+  const r = await apiPost("addJimpitanLog", payload);
+  if (!r.ok) { formError = r.error; setScreen(screens.konfirmasi(blok, no_rumah, { jumlah })); attachEvents(); return; }
+  formError = "";
+  await refreshLog();
+  currentTab = "riwayat";
+  render();
+  setScreen(screens.riwayat());
+  attachEvents();
+}
+async function delLog(id) {
+  if (!confirm("Hapus log ini?")) return;
+  const r = await apiPost("deleteJimpitanLog", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshLog();
+  setScreen(screens.tinjau()); attachEvents();
+}
+async function doPosting() {
+  const ids = Array.from(document.querySelectorAll(".log-check:checked")).map(c => c.value);
+  if (!ids.length) { alert("Pilih minimal satu log."); return; }
+  if (!confirm("Posting " + ids.length + " log terpilih ke Kas Jimpitan? Setelah diposting, log ini terkunci.")) return;
+  const r = await apiPost("postJimpitanLog", { ids });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshLog();
+  setScreen(screens.tinjau()); attachEvents();
+  alert(r.message);
+}
+async function submitMutasiKas() {
+  const btn = document.getElementById("btnSimpanMutasiKas");
+  const payload = { jenis_kas: "jimpitan", tanggal: document.getElementById("fTanggal").value, keterangan: document.getElementById("fKeterangan").value.trim(), jenis: document.getElementById("fJenis").value, jumlah: document.getElementById("fJumlah2").value, dicatat_oleh: session.nama };
+  if (!payload.keterangan || payload.jumlah === "") { formError = "Keterangan dan jumlah wajib diisi."; setScreen(mutasiKasForm()); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost("addKasMutasi", payload);
+  if (!r.ok) { formError = r.error; setScreen(mutasiKasForm()); attachEvents(); return; }
+  formError = "";
+  await refreshKas();
+  setScreen(screens.kas()); attachEvents();
+}
+
+/* ====================== EVENTS ====================== */
+function attachEvents() {
+  const q = s => document.querySelector(s), qa = s => Array.from(document.querySelectorAll(s));
+  q("#btnLogin") && q("#btnLogin").addEventListener("click", doLogin);
+  q("#btnLogout") && q("#btnLogout").addEventListener("click", () => { stopScanner(); clearSession(); currentTab = "beranda"; render(); });
+  qa("[data-tab]").forEach(b => b.addEventListener("click", () => goTab(b.dataset.tab)));
+  qa("[data-back-tab]").forEach(b => b.addEventListener("click", () => { stopScanner(); goTab(b.dataset.backTab); }));
+  q("#btnKeAmbil") && q("#btnKeAmbil").addEventListener("click", () => goTab("ambil"));
+  q("#btnMulaiScan") && q("#btnMulaiScan").addEventListener("click", () => { scanState.viaScan = true; startScanner(); });
+  qa("[data-pilih-rumah]").forEach(b => b.addEventListener("click", () => {
+    scanState.viaScan = false;
+    const [blok, no_rumah] = b.dataset.pilihRumah.split("|");
+    pilihRumah(blok, no_rumah);
+  }));
+  q("#btnSimpanScan") && q("#btnSimpanScan").addEventListener("click", () => {
+    const title = document.querySelector(".item-title").textContent;
+    const m = title.match(/Blok (.+) \/ No\. (.+)/);
+    submitScan(m ? m[1] : "", m ? m[2] : "");
+  });
+  qa("[data-del-log]").forEach(b => b.addEventListener("click", () => delLog(b.dataset.delLog)));
+  q("#btnPosting") && q("#btnPosting").addEventListener("click", doPosting);
+  q("#btnTambahMutasiKas") && q("#btnTambahMutasiKas").addEventListener("click", () => { formError=""; setScreen(mutasiKasForm()); attachEvents(); });
+  q("#btnSimpanMutasiKas") && q("#btnSimpanMutasiKas").addEventListener("click", submitMutasiKas);
+}
+
+/* ====================== MULAI ====================== */
+render();
+if (session) loadAndShow("beranda");
+</script>
+</body>
+</html>
