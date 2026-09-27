@@ -297,7 +297,7 @@ async function loadAndShow(tab) {
     else if (tab === "jimpitan") { await refreshJimpitanLog(); setScreen(screens.jimpitan()); }
     else if (tab === "tunggakan") { await refreshTunggakanRT(); setScreen(screens.tunggakan()); }
     else if (tab === "inventaris") { await refreshInventaris(); setScreen(screens.inventaris()); }
-    else if (tab === "rumah") { await refreshRumah(); setScreen(screens.rumah()); }
+    else if (tab === "rumah") { await refreshWarga(); setScreen(screens.rumah()); }
     else if (screens[tab]) setScreen(screens[tab]());
   } catch (err) {
     setScreen(`<div class="err">Gagal memuat data: ${esc(err.message)}</div>`);
@@ -894,13 +894,27 @@ async function resolveRumahFromForm() {
 /* ====================== FORM: Tambah/Ubah Rumah ====================== */
 function rumahForm(existing) {
   const v = existing || {};
+  const rumahNameMap = {}; cache.rumah.forEach(r => { rumahNameMap[String(r.id)] = r.nama; });
+  const kkChecklist = cache.kk.map(k => {
+    const linkedHere = v.id && String(k.id_rumah||"") === String(v.id);
+    const linkedElsewhere = k.id_rumah && !linkedHere;
+    return `
+    <label class="row" style="padding:8px 0; border-bottom:1px solid var(--line,#e3ddd3); cursor:pointer">
+      <span><input type="checkbox" class="rumah-kk-check" value="${esc(k.no_kk)}" ${linkedHere?'checked':''} style="margin-right:8px">${esc(k.kepala)}</span>
+      <span class="item-sub">${linkedElsewhere ? ('tertaut ke ' + esc(rumahNameMap[String(k.id_rumah)] || 'rumah lain')) : ''}</span>
+    </label>`;
+  }).join("");
   return `
     <button class="back" data-back-tab="rumah">‹ Batal</button>
     <h2 class="title">${existing ? "Ubah Rumah" : "Tambah Rumah"}</h2>
     ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
     <div class="field"><label>Nama/patokan rumah <span style="color:var(--brick)">*wajib</span></label><input id="fNamaRumah" value="${esc(v.nama||'')}" placeholder="Rumah Bu Sri, sebelah masjid"></div>
     <div class="field"><label>Catatan <span class="opt">(opsional)</span></label><input id="fCatatanRumah" value="${esc(v.catatan||'')}"></div>
-    <button class="btn block" id="btnSimpanRumah" data-id="${esc(v.id||'')}">Simpan</button>`;
+    <div class="field" style="margin-bottom:6px"><label>KK yang tinggal di rumah ini <span class="opt">(opsional, centang KK yang mau ditautkan)</span></label></div>
+    <div class="card" style="padding:4px 12px; max-height:280px; overflow-y:auto">
+      ${cache.kk.length ? kkChecklist : '<div class="empty">Belum ada data KK. Tambahkan dulu di tab Warga.</div>'}
+    </div>
+    <button class="btn block" id="btnSimpanRumah" data-id="${esc(v.id||'')}" style="margin-top:12px">Simpan</button>`;
 }
 
 /* ====================== FORM: Ubah tautan Rumah untuk 1 KK ====================== */
@@ -1284,14 +1298,27 @@ async function submitRumah() {
   const btn = document.getElementById("btnSimpanRumah");
   const id = btn.dataset.id;
   const payload = { nama: document.getElementById("fNamaRumah").value.trim(), catatan: document.getElementById("fCatatanRumah").value.trim() };
+  const checkedKK = Array.from(document.querySelectorAll(".rumah-kk-check:checked")).map(c => c.value);
   if (!payload.nama) { formError = "Nama rumah wajib diisi."; setScreen(rumahForm(id ? { id, ...payload } : null)); attachEvents(); return; }
   if (id) payload.id = id;
   btn.disabled = true; btn.textContent = "Menyimpan…";
   const r = await apiPost(id ? "updateRumah" : "addRumah", payload);
   if (!r.ok) { formError = r.error; setScreen(rumahForm(id ? payload : null)); attachEvents(); return; }
+  const rumahId = id || r.id;
+  // Tautkan semua KK yang dicentang ke rumah ini.
+  for (const no_kk of checkedKK) {
+    await apiPost("setRumahKK", { no_kk, id_rumah: rumahId });
+  }
+  // Lepas tautan KK yang sebelumnya di rumah ini tapi sekarang dilepas centangnya (saat mengubah rumah).
+  if (id) {
+    const toUnlink = cache.kk.filter(k => String(k.id_rumah||"") === String(id) && checkedKK.indexOf(String(k.no_kk)) === -1);
+    for (const k of toUnlink) {
+      await apiPost("setRumahKK", { no_kk: k.no_kk, id_rumah: "" });
+    }
+  }
   formError = "";
   currentTab = "rumah";
-  await refreshRumah(); setScreen(screens.rumah()); attachEvents();
+  await refreshWarga(); setScreen(screens.rumah()); attachEvents();
 }
 async function delRumah(id) {
   if (!confirm("Hapus data rumah ini? Hanya bisa dihapus kalau tidak ada KK yang masih tertaut.")) return;
