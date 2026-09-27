@@ -152,6 +152,7 @@ const can = {
   input: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_petugas"),
   post: () => session && (session.peran === "ketua" || session.peran === "kt_bendahara"),
   viewKas: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_bendahara"),
+  manageStiker: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_bendahara"),
 };
 
 /* ====================== STATE ====================== */
@@ -201,6 +202,7 @@ function appShell() {
   tabs.push(["riwayat","🗒️","Riwayat"]);
   if (can.post()) tabs.push(["tinjau","✅","Tinjau"]);
   if (can.viewKas()) tabs.push(["kas","💰","Kas"]);
+  if (can.manageStiker()) tabs.push(["stiker","🏷️","Stiker"]);
   return `
     <header>
       <div class="brand">Jimpitan Squad</div>
@@ -227,6 +229,7 @@ async function loadAndShow(tab) {
     else if (tab === "riwayat") { await refreshLog(); setScreen(screens.riwayat()); }
     else if (tab === "tinjau") { await refreshLog(); setScreen(screens.tinjau()); }
     else if (tab === "kas") { await refreshKas(); setScreen(screens.kas()); }
+    else if (tab === "stiker") { await refreshRumah(); setScreen(screens.stiker()); }
   } catch (err) { setScreen(`<div class="err">Gagal memuat data: ${esc(err.message)}</div>`); }
   attachEvents();
 }
@@ -261,27 +264,28 @@ const screens = {
       <h2 class="title" style="margin-top:18px; font-size:16px">Atau pilih manual</h2>
       <div class="card" style="padding:4px 12px; max-height:340px; overflow-y:auto">
         ${cache.rumah.length ? cache.rumah.map(r => `
-          <button class="list-link" data-pilih-rumah="${esc(r.blok)}|${esc(r.no_rumah)}">
-            <span class="txt"><div class="name">Blok ${esc(r.blok)} / No. ${esc(r.no_rumah)}</div><div class="desc">${r.jumlah_kk} KK di rumah ini</div></span>
+          <button class="list-link" data-pilih-rumah="${esc(r.id)}">
+            <span class="txt"><div class="name">${esc(r.nama)}</div><div class="desc">${r.jumlah_kk} KK di rumah ini</div></span>
             <span class="chev">›</span>
-          </button>`).join("") : '<div class="empty">Data rumah belum ada (belum ada alamat di Data Warga).</div>'}
+          </button>`).join("") : '<div class="empty">Data rumah belum ada. Tambahkan lewat menu Data Rumah di Mas eRTe Mobile.</div>'}
       </div>`;
   },
 
-  konfirmasi(blok, no_rumah, opts) {
+  konfirmasi(id_rumah, opts) {
     const o = opts || {};
+    const rumahRec = cache.rumah.find(r => String(r.id) === String(id_rumah)) || {};
     return `
       <button class="back" data-back-tab="ambil">‹ Batal</button>
       <h2 class="title">Konfirmasi Setoran</h2>
       ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
       <div class="card">
         <div class="row"><span class="label">Rumah</span></div>
-        <div class="item-title" style="margin-top:2px; font-size:18px">Blok ${esc(blok)} / No. ${esc(no_rumah)}</div>
+        <div class="item-title" style="margin-top:2px; font-size:18px">${esc(rumahRec.nama || o.nama_rumah || "-")}</div>
         <div class="geo" id="geoStatus">📍 ${o.geo ? esc(o.geo) : "Mengambil lokasi GPS…"}</div>
       </div>
       <div class="field"><label>Jumlah (Rp)</label><input id="fJumlah" type="number" value="${o.jumlah||500}"></div>
       <div class="field"><label>Catatan <span class="opt">(opsional)</span></label><input id="fCatatan" placeholder="mis. dititip tetangga"></div>
-      <button class="btn block" id="btnSimpanScan">Simpan</button>`;
+      <button class="btn block" id="btnSimpanScan" data-id-rumah="${esc(id_rumah)}">Simpan</button>`;
   },
 
   riwayat(){
@@ -293,7 +297,7 @@ const screens = {
       <div class="card">
         ${list.length ? list.map(l => `
           <div class="item">
-            <div class="row"><span class="item-title">Blok ${esc(l.blok)} / No. ${esc(l.no_rumah)}</span>
+            <div class="row"><span class="item-title">${esc(l.nama_rumah||'-')}</span>
               ${String(l.status).toLowerCase()==='sudah_posting' ? '<span class="badge ok">Sudah posting</span>' : '<span class="badge wait">Menunggu</span>'}</div>
             <div class="item-sub">${fmtWaktu(l.tanggal)} · ${rupiah(l.jumlah)}${l.catatan ? (' · '+esc(l.catatan)) : ''}</div>
             ${l.latitude ? `<div class="geo">📍 ${esc(l.latitude)}, ${esc(l.longitude)}</div>` : ''}
@@ -311,7 +315,7 @@ const screens = {
       <div class="card" style="margin-top:14px">
         ${belum.length ? belum.map(l => `
           <div class="item">
-            <div class="row"><span><input type="checkbox" class="log-check" value="${esc(l.id)}" checked style="margin-right:8px">Blok ${esc(l.blok)} / No. ${esc(l.no_rumah)}</span>
+            <div class="row"><span><input type="checkbox" class="log-check" value="${esc(l.id)}" checked style="margin-right:8px">${esc(l.nama_rumah||'-')}</span>
               <span style="font-weight:700; font-size:13.5px">${rupiah(l.jumlah)}</span></div>
             <div class="item-sub">${fmtWaktu(l.tanggal)} · dicatat ${esc(l.dicatat_oleh)}</div>
             <div class="btn-row"><button class="btn brick sm" data-del-log="${esc(l.id)}">Hapus</button></div>
@@ -334,6 +338,25 @@ const screens = {
             <div style="color:${String(m.jenis).toLowerCase()==='masuk'?'var(--green)':'var(--brick)'}; font-weight:700; font-size:13.5px; white-space:nowrap">${String(m.jenis).toLowerCase()==='masuk'?'+':'-'} ${rupiah(m.jumlah)}</div>
           </div>`).join("") : '<div class="empty">Belum ada mutasi.</div>'}
       </div>`;
+  },
+
+  stiker(){
+    return `
+      <div class="section-tag">STIKER QR RUMAH</div>
+      <h2 class="title">Cetak Stiker</h2>
+      <p class="mask-note">Pilih rumah yang mau dicetak stikernya, tempel di rumah masing-masing, lalu discan lewat menu Ambil saat setor jimpitan.</p>
+      <div class="btn-row" style="margin:10px 0 2px">
+        <button class="btn outline sm" id="btnPilihSemuaRumah">Pilih semua</button>
+        <button class="btn outline sm" id="btnBatalPilihRumah">Batal pilih</button>
+      </div>
+      <div class="card" style="padding:4px 12px; max-height:360px; overflow-y:auto">
+        ${cache.rumah.length ? cache.rumah.map(r => `
+          <label class="row" style="padding:10px 0; border-bottom:1px solid var(--line); cursor:pointer">
+            <span><input type="checkbox" class="stiker-check" value="${esc(r.id)}" checked style="margin-right:8px">${esc(r.nama)}</span>
+            <span class="item-sub">${r.jumlah_kk} KK</span>
+          </label>`).join("") : '<div class="empty">Belum ada data rumah. Tambahkan lewat menu Data Rumah di Mas eRTe Mobile.</div>'}
+      </div>
+      <button class="btn gold block" id="btnCetakStiker" style="margin-top:12px" ${cache.rumah.length?'':'disabled'}>🖨️ Cetak Stiker Terpilih</button>`;
   }
 };
 
@@ -353,14 +376,12 @@ function mutasiKasForm() {
 /* ====================== SCANNER QR ====================== */
 function parseQR(text) {
   text = String(text || "").trim();
-  let m = text.match(/RUMAH[:\|]\s*([^\/\|]+)[\/\|]\s*(.+)/i);
-  if (m) return { blok: m[1].trim(), no_rumah: m[2].trim() };
+  let m = text.match(/^RUMAH[:\|]\s*(.+)$/i);
+  if (m) return { id_rumah: m[1].trim() };
   try {
     const j = JSON.parse(text);
-    if (j.blok && (j.no_rumah || j.no)) return { blok: String(j.blok), no_rumah: String(j.no_rumah || j.no) };
+    if (j.id_rumah) return { id_rumah: String(j.id_rumah) };
   } catch (e) {}
-  m = text.match(/^([A-Za-z0-9]+)[\/\-]([A-Za-z0-9]+)$/);
-  if (m) return { blok: m[1], no_rumah: m[2] };
   return null;
 }
 async function startScanner() {
@@ -393,7 +414,8 @@ async function startScanner() {
         if (code && code.data) {
           const parsed = parseQR(code.data);
           stopScanner();
-          if (parsed) pilihRumah(parsed.blok, parsed.no_rumah);
+          if (parsed && cache.rumah.some(r => String(r.id) === String(parsed.id_rumah))) { pilihRumah(parsed.id_rumah); }
+          else if (parsed) { setScreen(screens.ambil()); attachEvents(); alert("QR terbaca, tapi rumah dengan data ini tidak ditemukan (mungkin datanya sudah diubah/dihapus). Silakan pilih rumah manual, atau cetak ulang stikernya lewat menu Stiker."); }
           else { setScreen(screens.ambil()); attachEvents(); alert("QR terbaca tapi formatnya tidak dikenali: \\n\\n" + code.data + "\\n\\nSilakan pilih rumah manual, atau minta stiker QR dicetak ulang sesuai format yang didukung."); }
           return;
         }
@@ -410,8 +432,8 @@ function stopScanner() {
   if (scanState.stream) scanState.stream.getTracks().forEach(t => t.stop());
   scanState.raf = null; scanState.stream = null;
 }
-function pilihRumah(blok, no_rumah) {
-  setScreen(screens.konfirmasi(blok, no_rumah, {}));
+function pilihRumah(id_rumah) {
+  setScreen(screens.konfirmasi(id_rumah, {}));
   attachEvents();
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -425,18 +447,18 @@ function pilihRumah(blok, no_rumah) {
 }
 
 /* ====================== SUBMIT ====================== */
-async function submitScan(blok, no_rumah) {
+async function submitScan(id_rumah) {
   const btn = document.getElementById("btnSimpanScan");
   const jumlah = document.getElementById("fJumlah").value;
   const catatan = document.getElementById("fCatatan").value.trim();
   btn.disabled = true; btn.textContent = "Menyimpan…";
   const payload = {
-    tanggal: new Date().toISOString(), blok, no_rumah, jumlah, catatan,
+    tanggal: new Date().toISOString(), id_rumah, jumlah, catatan,
     sumber: scanState.viaScan ? "qr" : "manual",
     latitude: scanState.found ? scanState.found.lat : "", longitude: scanState.found ? scanState.found.lng : ""
   };
   const r = await apiPost("addJimpitanLog", payload);
-  if (!r.ok) { formError = r.error; setScreen(screens.konfirmasi(blok, no_rumah, { jumlah })); attachEvents(); return; }
+  if (!r.ok) { formError = r.error; setScreen(screens.konfirmasi(id_rumah, { jumlah })); attachEvents(); return; }
   formError = "";
   await refreshLog();
   currentTab = "riwayat";
@@ -473,6 +495,35 @@ async function submitMutasiKas() {
   setScreen(screens.kas()); attachEvents();
 }
 
+/* ====================== STIKER QR ====================== */
+function cetakStiker() {
+  const ids = Array.from(document.querySelectorAll(".stiker-check:checked")).map(c => c.value);
+  if (!ids.length) { alert("Pilih minimal satu rumah untuk dicetak."); return; }
+  const rumahTerpilih = cache.rumah.filter(r => ids.indexOf(String(r.id)) > -1);
+  const w = window.open("", "_blank");
+  if (!w) { alert("Popup diblokir browser. Izinkan popup untuk mencetak stiker."); return; }
+  const cards = rumahTerpilih.map(r => {
+    const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent("RUMAH:" + r.id);
+    return `<div class="stiker-card"><img src="${qrUrl}" alt="QR"><div class="stiker-nama">${esc(r.nama)}</div><div class="stiker-sub">Jimpitan Squad · RT 11 Tulusari</div></div>`;
+  }).join("");
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cetak Stiker Rumah</title>
+<style>
+  body{font-family:sans-serif; margin:20px; color:#20261D;}
+  .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+  .stiker-card{border:1px dashed #999; border-radius:10px; padding:12px; text-align:center; page-break-inside:avoid;}
+  .stiker-card img{width:100%; max-width:160px;}
+  .stiker-nama{font-weight:700; margin-top:6px; font-size:13px; word-break:break-word;}
+  .stiker-sub{font-size:10px; color:#666; margin-top:2px;}
+  .toolbar{margin-bottom:16px;}
+  .toolbar button{font-family:inherit; font-size:14px; padding:8px 16px; border-radius:8px; border:none; background:#B98A2E; color:#fff; cursor:pointer;}
+  @media print { .toolbar{display:none;} }
+</style></head><body>
+<div class="toolbar"><button onclick="window.print()">Cetak Sekarang</button></div>
+<div class="grid">${cards}</div>
+</body></html>`);
+  w.document.close();
+}
+
 /* ====================== EVENTS ====================== */
 function attachEvents() {
   const q = s => document.querySelector(s), qa = s => Array.from(document.querySelectorAll(s));
@@ -484,18 +535,18 @@ function attachEvents() {
   q("#btnMulaiScan") && q("#btnMulaiScan").addEventListener("click", () => { scanState.viaScan = true; startScanner(); });
   qa("[data-pilih-rumah]").forEach(b => b.addEventListener("click", () => {
     scanState.viaScan = false;
-    const [blok, no_rumah] = b.dataset.pilihRumah.split("|");
-    pilihRumah(blok, no_rumah);
+    pilihRumah(b.dataset.pilihRumah);
   }));
   q("#btnSimpanScan") && q("#btnSimpanScan").addEventListener("click", () => {
-    const title = document.querySelector(".item-title").textContent;
-    const m = title.match(/Blok (.+) \/ No\. (.+)/);
-    submitScan(m ? m[1] : "", m ? m[2] : "");
+    submitScan(q("#btnSimpanScan").dataset.idRumah);
   });
   qa("[data-del-log]").forEach(b => b.addEventListener("click", () => delLog(b.dataset.delLog)));
   q("#btnPosting") && q("#btnPosting").addEventListener("click", doPosting);
   q("#btnTambahMutasiKas") && q("#btnTambahMutasiKas").addEventListener("click", () => { formError=""; setScreen(mutasiKasForm()); attachEvents(); });
   q("#btnSimpanMutasiKas") && q("#btnSimpanMutasiKas").addEventListener("click", submitMutasiKas);
+  q("#btnCetakStiker") && q("#btnCetakStiker").addEventListener("click", cetakStiker);
+  q("#btnPilihSemuaRumah") && q("#btnPilihSemuaRumah").addEventListener("click", () => qa(".stiker-check").forEach(c => c.checked = true));
+  q("#btnBatalPilihRumah") && q("#btnBatalPilihRumah").addEventListener("click", () => qa(".stiker-check").forEach(c => c.checked = false));
 }
 
 /* ====================== MULAI ====================== */
