@@ -180,6 +180,7 @@ const can = {
   inputJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_petugas"),
   postJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_bendahara"),
   manageInventaris: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
+  manageRumah: () => session && (session.peran === "ketua" || session.peran === "sekretaris" || session.peran === "kt_ketua" || session.peran === "kt_bendahara"),
 };
 // alias supaya kode lama yang memanggil can.editKas() tetap berfungsi (Kas RT)
 can.editKas = can.editKasRT;
@@ -267,7 +268,7 @@ function appShell() {
       <button data-tab="warga" class="${currentTab==='warga'?'active':''}"><span class="ic">👪</span>Warga</button>
       <button data-tab="kas" class="${currentTab==='kas'?'active':''}"><span class="ic">💰</span>Kas</button>
       <button data-tab="info" class="${currentTab==='info'?'active':''}"><span class="ic">📣</span>Info</button>
-      <button data-tab="lainnya" class="${['lainnya','surat','pengaduan','kt','kontak','jimpitan','akun','iuranrt','iuranrtDetail','tunggakan','inventaris'].includes(currentTab)?'active':''}"><span class="ic">☰</span>Lainnya</button>
+      <button data-tab="lainnya" class="${['lainnya','surat','pengaduan','kt','kontak','jimpitan','akun','iuranrt','iuranrtDetail','tunggakan','inventaris','rumah'].includes(currentTab)?'active':''}"><span class="ic">☰</span>Lainnya</button>
     </nav>`;
 }
 
@@ -296,6 +297,7 @@ async function loadAndShow(tab) {
     else if (tab === "jimpitan") { await refreshJimpitanLog(); setScreen(screens.jimpitan()); }
     else if (tab === "tunggakan") { await refreshTunggakanRT(); setScreen(screens.tunggakan()); }
     else if (tab === "inventaris") { await refreshInventaris(); setScreen(screens.inventaris()); }
+    else if (tab === "rumah") { await refreshRumah(); setScreen(screens.rumah()); }
     else if (screens[tab]) setScreen(screens[tab]());
   } catch (err) {
     setScreen(`<div class="err">Gagal memuat data: ${esc(err.message)}</div>`);
@@ -308,7 +310,7 @@ async function refreshBeranda() {
   if (k.ok) { cache.kas = k; }
 }
 async function refreshWarga() {
-  const w = await apiGet("getWargaKK");
+  const [w] = await Promise.all([apiGet("getWargaKK"), refreshRumah()]);
   if (!w.ok) throw new Error(w.error);
   cache.kk = w.kk; cache.totalKK = w.total_kk; cache.totalJiwa = w.total_jiwa;
 }
@@ -436,7 +438,7 @@ const screens = {
         ${cache.kk.map(k=>`
           <button class="list-link" data-open-kk="${esc(k.no_kk)}">
             <span class="txt"><div class="name">${esc(k.kepala)}</div>
-            <div class="desc">No. KK ${esc(can.seeFullNik(k.no_kk) ? k.no_kk : maskNik(k.no_kk))} · Blok ${esc(k.blok||'-')} · ${k.jiwa} jiwa</div></span>
+            <div class="desc">No. KK ${esc(can.seeFullNik(k.no_kk) ? k.no_kk : maskNik(k.no_kk))} · Rumah: ${esc(k.nama_rumah||'belum ditautkan')} · ${k.jiwa} jiwa</div></span>
             <span class="chev">›</span>
           </button>`).join("")}
       </div>
@@ -444,15 +446,38 @@ const screens = {
   },
 
   kkDetail(no_kk){
+    const kkRec = cache.kk.find(k => String(k.no_kk) === String(no_kk)) || {};
     return `
       <button class="back" data-back-tab="warga">‹ Kembali</button>
       <h2 class="title">KK ${esc(can.seeFullNik(no_kk) ? no_kk : maskNik(no_kk))}</h2>
+      <div class="card" style="margin-bottom:12px">
+        <div class="row"><span class="label">Rumah</span></div>
+        <div class="value-lg" style="font-size:16px">${esc(kkRec.nama_rumah || 'Belum ditautkan')}</div>
+        ${can.manageRumah() ? `<button class="btn outline sm" style="margin-top:8px" data-ubah-rumah-kk="${esc(no_kk)}">Ubah Rumah</button>` : ''}
+      </div>
       <div id="kkAnggotaWrap" class="card"><div class="empty">Memuat anggota…</div></div>
       ${can.editWarga() ? `
       <div class="btn-row">
         <button class="btn outline block" data-add-anggota="${esc(no_kk)}">+ Tambah anggota</button>
         <button class="btn brick block" data-del-kk="${esc(no_kk)}">Hapus KK ini</button>
       </div>` : ""}`;
+  },
+
+  rumah(){
+    const manage = can.manageRumah();
+    return `
+      <button class="back" data-back-tab="lainnya">‹ Kembali</button>
+      <h2 class="title">Data Rumah</h2>
+      <div class="mask-note" style="margin-top:-4px">Rumah adalah patokan bebas (bukan Blok/No. resmi) yang dipakai untuk Jimpitan. 1 rumah bisa ditautkan ke lebih dari 1 KK.</div>
+      ${manage ? '<button class="btn gold block" id="btnTambahRumah" style="margin-top:12px">+ Tambah rumah</button>' : ''}
+      <div class="card" style="margin-top:12px; padding:4px 12px">
+        ${cache.rumah.length ? cache.rumah.map(r=>`
+          <div class="item">
+            <div class="row"><span class="item-title">${esc(r.nama)}</span><span class="item-sub">${r.jumlah_kk} KK</span></div>
+            ${r.catatan ? `<div class="item-sub">${esc(r.catatan)}</div>` : ''}
+            ${manage ? `<div class="btn-row"><button class="btn outline sm" data-edit-rumah="${esc(r.id)}">Ubah</button><button class="btn brick sm" data-del-rumah="${esc(r.id)}">Hapus</button></div>` : ''}
+          </div>`).join("") : '<div class="empty">Belum ada data rumah. Tambahkan lewat tombol di atas.</div>'}
+      </div>`;
   },
 
   kas(){
@@ -496,6 +521,7 @@ const screens = {
       ["🤝","Karang Taruna","Info & kegiatan pemuda dukuh","kt"],
       ...(can.manageIuranRT() ? [["🧾","Iuran RT","Rekap iuran per pertemuan Minggu Pahingan","iuranrt"]] : []),
       ...(can.inputJimpitan() || can.postJimpitan() ? [["📷","Jimpitan","Catat & posting jimpitan per rumah","jimpitan"]] : []),
+      ...(can.manageRumah() ? [["🏘️","Data Rumah","Kelola daftar rumah untuk jimpitan","rumah"]] : []),
       ["📦","Inventaris & Aset","Daftar barang RT & kondisinya","inventaris"],
       ["📇","Kontak Penting","Pengurus RT & layanan darurat","kontak"],
     ];
@@ -643,7 +669,7 @@ const screens = {
     return `
       <button class="back" data-back-tab="lainnya">‹ Kembali</button>
       <h2 class="title">Jimpitan</h2>
-      <div class="mask-note" style="margin-top:-4px">Satuan jimpitan adalah rumah (Blok + No. Rumah), bukan KK — Rp500/hari. Log tercatat dulu di sini, baru resmi masuk saldo Kas Jimpitan setelah diposting.</div>
+      <div class="mask-note" style="margin-top:-4px">Satuan jimpitan adalah rumah (nama/patokan bebas, kelola di menu Data Rumah), bukan KK — Rp500/hari. Log tercatat dulu di sini, baru resmi masuk saldo Kas Jimpitan setelah diposting.</div>
       ${canInput ? '<button class="btn gold block" id="btnCatatJimpitan" style="margin-top:12px">+ Catat setoran rumah</button>' : ''}
       <div class="card" style="margin-top:12px">
         <div class="row"><span class="label">Total log belum diposting</span></div>
@@ -655,7 +681,7 @@ const screens = {
         ${belum.length ? belum.map(l=>`
           <div class="item">
             <label class="row" style="cursor:pointer">
-              <span>${canPost ? `<input type="checkbox" class="jimpitan-check" value="${esc(l.id)}" style="margin-right:8px">` : ''}<span class="item-title">Blok ${esc(l.blok)} / No. ${esc(l.no_rumah)}</span></span>
+              <span>${canPost ? `<input type="checkbox" class="jimpitan-check" value="${esc(l.id)}" style="margin-right:8px">` : ''}<span class="item-title">${esc(l.nama_rumah||'-')}</span></span>
               <span style="font-weight:700">${rupiah(l.jumlah)}</span>
             </label>
             <div class="item-sub">${fmtTanggal(l.tanggal)} · dicatat oleh ${esc(l.dicatat_oleh||'-')}${l.catatan?(' · '+esc(l.catatan)):''}</div>
@@ -667,7 +693,7 @@ const screens = {
       <div class="card">
         ${sudah.slice(0,20).map(l=>`
           <div class="item">
-            <div class="row"><span class="item-title">Blok ${esc(l.blok)} / No. ${esc(l.no_rumah)}</span><span style="font-weight:700">${rupiah(l.jumlah)}</span></div>
+            <div class="row"><span class="item-title">${esc(l.nama_rumah||'-')}</span><span style="font-weight:700">${rupiah(l.jumlah)}</span></div>
             <div class="item-sub">${fmtTanggal(l.tanggal)} · dicatat oleh ${esc(l.dicatat_oleh||'-')}</div>
           </div>`).join("")}
       </div>` : ""}`;
@@ -793,8 +819,6 @@ function anggotaForm(no_kk, existing) {
     <div class="field"><label>Status hubungan dalam keluarga <span class="opt">(opsional)</span></label><input id="fHubungan" value="${esc(v.status_hubungan||'')}" placeholder="Kepala Keluarga / Istri / Anak"></div>
     <div class="field"><label>Nama ayah <span class="opt">(opsional)</span></label><input id="fAyah" value="${esc(v.nama_ayah||'')}"></div>
     <div class="field"><label>Nama ibu <span class="opt">(opsional)</span></label><input id="fIbu" value="${esc(v.nama_ibu||'')}"></div>
-    ${!existing ? `
-    <div class="field"><label>Blok/No. rumah <span class="opt">(alamat KK — isi jika KK baru)</span></label><input id="fBlok" value="${esc(v.blok||'')}" placeholder="Blok A / No. 3"></div>` : ""}
     <button class="btn block" id="btnSimpanAnggota" data-existing="${existing?'1':'0'}" data-no-kk="${esc(no_kk)}">Simpan</button>`;
 }
 
@@ -818,7 +842,7 @@ function kkForm() {
     <h2 class="title">Tambah KK Baru</h2>
     ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
     <div class="field"><label>No. KK <span style="color:var(--brick)">*wajib</span></label><input id="fNoKK" inputmode="numeric"></div>
-    <div class="field"><label>Blok/No. rumah <span class="opt">(opsional, bisa dilengkapi nanti)</span></label><input id="fBlok" placeholder="Blok A / No. 3"></div>
+    ${rumahSelectField("")}
     <p style="font-size:12.5px; color:var(--sub); margin:0 0 12px">Isi anggota keluarga. Hanya Nama &amp; NIK anggota pertama (Kepala Keluarga) yang wajib — anggota lain bisa ditambah sekarang lewat tombol di bawah, atau menyusul lewat "+ Tambah anggota" di halaman KK.</p>
     <div id="kkAnggotaRows">${kkAnggotaRow(0, true)}</div>
     <button type="button" class="btn outline block" id="btnTambahBarisAnggota">+ Tambah anggota lain</button>
@@ -828,6 +852,66 @@ function bindKkRowRemove() {
   Array.from(document.querySelectorAll("[data-remove-row]")).forEach(b => {
     b.onclick = () => { const row = b.closest(".kk-anggota-row"); if (row) row.remove(); };
   });
+}
+
+/* ====================== Rumah: field picker terpakai ulang (KK & Jimpitan) ====================== */
+// Render <select> pilihan rumah + input nama untuk "rumah baru", dipakai di kkForm & jimpitanForm.
+function rumahSelectField(selectedId) {
+  const opsi = cache.rumah.map(r => `<option value="${esc(r.id)}" ${selectedId===r.id?'selected':''}>${esc(r.nama)} (${r.jumlah_kk} KK)</option>`).join("");
+  return `
+    <div class="field"><label>Rumah <span class="opt">(opsional, bisa dilengkapi nanti)</span></label>
+      <select id="fRumahPilih">
+        <option value="">— belum ditautkan —</option>
+        ${opsi}
+        <option value="__baru__">+ Buat rumah baru…</option>
+      </select>
+    </div>
+    <div id="fRumahBaruWrap" style="display:none">
+      <div class="field"><label>Nama/patokan rumah baru</label><input id="fRumahBaruNama" placeholder="Rumah Bu Sri, sebelah masjid"></div>
+    </div>`;
+}
+function bindRumahSelect() {
+  const sel = document.getElementById("fRumahPilih");
+  const wrap = document.getElementById("fRumahBaruWrap");
+  if (!sel || !wrap) return;
+  sel.addEventListener("change", () => { wrap.style.display = sel.value === "__baru__" ? "block" : "none"; });
+}
+// Ambil id_rumah dari form (fRumahPilih + fRumahBaruNama kalau perlu buat baru dulu).
+async function resolveRumahFromForm() {
+  const sel = document.getElementById("fRumahPilih");
+  if (!sel) return { ok: true, id_rumah: "" };
+  if (sel.value === "__baru__") {
+    const nama = (document.getElementById("fRumahBaruNama").value || "").trim();
+    if (!nama) return { ok: false, error: "Nama rumah baru wajib diisi." };
+    const r = await apiPost("addRumah", { nama });
+    if (!r.ok) return { ok: false, error: r.error };
+    await refreshRumah();
+    return { ok: true, id_rumah: r.id };
+  }
+  return { ok: true, id_rumah: sel.value || "" };
+}
+
+/* ====================== FORM: Tambah/Ubah Rumah ====================== */
+function rumahForm(existing) {
+  const v = existing || {};
+  return `
+    <button class="back" data-back-tab="rumah">‹ Batal</button>
+    <h2 class="title">${existing ? "Ubah Rumah" : "Tambah Rumah"}</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Nama/patokan rumah <span style="color:var(--brick)">*wajib</span></label><input id="fNamaRumah" value="${esc(v.nama||'')}" placeholder="Rumah Bu Sri, sebelah masjid"></div>
+    <div class="field"><label>Catatan <span class="opt">(opsional)</span></label><input id="fCatatanRumah" value="${esc(v.catatan||'')}"></div>
+    <button class="btn block" id="btnSimpanRumah" data-id="${esc(v.id||'')}">Simpan</button>`;
+}
+
+/* ====================== FORM: Ubah tautan Rumah untuk 1 KK ====================== */
+function rumahPickerFormKK(no_kk) {
+  const kkRec = cache.kk.find(k => String(k.no_kk) === String(no_kk)) || {};
+  return `
+    <button class="back" data-back-kk="${esc(no_kk)}">‹ Batal</button>
+    <h2 class="title">Ubah Rumah — KK ${esc(no_kk)}</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    ${rumahSelectField(kkRec.id_rumah || "")}
+    <button class="btn block" id="btnSimpanRumahKK" data-no-kk="${esc(no_kk)}">Simpan</button>`;
 }
 
 /* ====================== FORM: Mutasi Kas (RT, Jimpitan & Gerabah) ====================== */
@@ -927,22 +1011,12 @@ function pertemuanForm() {
 /* ====================== FORM: Catat Jimpitan ====================== */
 function jimpitanForm() {
   const today = new Date().toISOString().slice(0,10);
-  const opsiRumah = cache.rumah.map(r => `<option value="${esc(r.blok)}|${esc(r.no_rumah)}">Blok ${esc(r.blok)} / No. ${esc(r.no_rumah)} (${r.jumlah_kk} KK)</option>`).join("");
   return `
     <button class="back" data-back-tab="jimpitan">‹ Batal</button>
     <h2 class="title">Catat Setoran Jimpitan</h2>
     ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
     <div class="field"><label>Tanggal</label><input id="fTanggal" type="date" value="${today}"></div>
-    <div class="field"><label>Rumah</label>
-      <select id="fRumahPilih">
-        <option value="">— pilih dari data warga —</option>${opsiRumah}
-        <option value="__manual__">Isi manual…</option>
-      </select>
-    </div>
-    <div id="fRumahManualWrap" style="display:none">
-      <div class="field"><label>Blok</label><input id="fBlok"></div>
-      <div class="field"><label>No. Rumah</label><input id="fNoRumah"></div>
-    </div>
+    ${rumahSelectField("")}
     <div class="field"><label>Jumlah (Rp)</label><input id="fJumlah" type="number" min="0" value="500"></div>
     <div class="field"><label>Catatan <span class="opt">(opsional)</span></label><input id="fCatatan"></div>
     <button class="btn block" id="btnSimpanJimpitan">Simpan</button>`;
@@ -997,6 +1071,17 @@ function attachEvents() {
   qa("[data-add-anggota]").forEach(b => b.addEventListener("click", () => { formError=""; setScreen(anggotaForm(b.dataset.addAnggota, null)); attachEvents(); }));
   q("#btnSimpanAnggota") && q("#btnSimpanAnggota").addEventListener("click", submitAnggota);
   qa("[data-del-kk]").forEach(b => b.addEventListener("click", () => delKK(b.dataset.delKk)));
+  qa("[data-ubah-rumah-kk]").forEach(b => b.addEventListener("click", () => { formError=""; setScreen(rumahPickerFormKK(b.dataset.ubahRumahKk)); attachEvents(); }));
+  q("#btnSimpanRumahKK") && q("#btnSimpanRumahKK").addEventListener("click", submitRumahKK);
+
+  /* ---- rumah ---- */
+  q("#btnTambahRumah") && q("#btnTambahRumah").addEventListener("click", () => { formError=""; setScreen(rumahForm()); attachEvents(); });
+  qa("[data-edit-rumah]").forEach(b => b.addEventListener("click", () => {
+    const rrec = cache.rumah.find(x => x.id === b.dataset.editRumah);
+    formError = ""; setScreen(rumahForm(rrec)); attachEvents();
+  }));
+  q("#btnSimpanRumah") && q("#btnSimpanRumah").addEventListener("click", submitRumah);
+  qa("[data-del-rumah]").forEach(b => b.addEventListener("click", () => delRumah(b.dataset.delRumah)));
 
   qa("[data-tambah-mutasi]").forEach(b => b.addEventListener("click", () => { formError=""; setScreen(mutasiForm(null, b.dataset.tambahMutasi)); attachEvents(); }));
   q("#btnSimpanMutasi") && q("#btnSimpanMutasi").addEventListener("click", submitMutasi);
@@ -1066,10 +1151,7 @@ function attachEvents() {
 
   /* ---- jimpitan ---- */
   q("#btnCatatJimpitan") && q("#btnCatatJimpitan").addEventListener("click", () => { formError=""; setScreen(jimpitanForm()); attachEvents(); });
-  const selRumah = q("#fRumahPilih");
-  selRumah && selRumah.addEventListener("change", () => {
-    q("#fRumahManualWrap").style.display = selRumah.value === "__manual__" ? "block" : "none";
-  });
+  bindRumahSelect();
   q("#btnSimpanJimpitan") && q("#btnSimpanJimpitan").addEventListener("click", submitJimpitan);
   qa("[data-del-jimpitan]").forEach(b => b.addEventListener("click", () => delJimpitan(b.dataset.delJimpitan)));
   q("#btnPostingJimpitan") && q("#btnPostingJimpitan").addEventListener("click", postingJimpitan);
@@ -1136,7 +1218,6 @@ async function openKK(no_kk) {
 }
 async function submitKK() {
   const no_kk = document.getElementById("fNoKK").value.trim();
-  const blok = document.getElementById("fBlok").value.trim();
   const rows = Array.from(document.querySelectorAll(".kk-anggota-row")).map(row => ({
     nama: row.querySelector(".fRowNama").value.trim(),
     nik: row.querySelector(".fRowNik").value.trim(),
@@ -1148,9 +1229,11 @@ async function submitKK() {
   if (!first.nama || !first.nik) { formError = "Nama dan NIK anggota pertama (Kepala Keluarga) wajib diisi."; setScreen(kkForm()); attachEvents(); return; }
   const invalidExtra = extra.find(a => !a.nama || !a.nik);
   if (invalidExtra) { formError = "Lengkapi Nama dan NIK untuk setiap anggota tambahan, atau hapus barisnya jika tidak dipakai."; setScreen(kkForm()); attachEvents(); return; }
+  const rr0 = await resolveRumahFromForm();
+  if (!rr0.ok) { formError = rr0.error; setScreen(kkForm()); attachEvents(); return; }
 
   const btn = document.getElementById("btnSimpanKK"); btn.disabled = true; btn.textContent = "Menyimpan…";
-  const r = await apiPost("addAnggota", { no_kk, blok, nama: first.nama, nik: first.nik, status_hubungan: first.status_hubungan });
+  const r = await apiPost("addAnggota", { no_kk, id_rumah: rr0.id_rumah, nama: first.nama, nik: first.nik, status_hubungan: first.status_hubungan });
   if (!r.ok) { formError = r.error; setScreen(kkForm()); attachEvents(); return; }
 
   const warnings = [];
@@ -1174,7 +1257,6 @@ async function submitAnggota() {
     status_hubungan: document.getElementById("fHubungan").value.trim(), nama_ayah: document.getElementById("fAyah").value.trim(),
     nama_ibu: document.getElementById("fIbu").value.trim()
   };
-  if (!existing) payload.blok = document.getElementById("fBlok").value.trim();
   if (!payload.nama || !payload.nik) { formError = "Nama dan NIK wajib diisi."; setScreen(anggotaForm(no_kk, existing ? payload : null)); attachEvents(); return; }
   btn.disabled = true; btn.textContent = "Menyimpan…";
   const r = await apiPost(existing ? "updateAnggota" : "addAnggota", payload);
@@ -1195,6 +1277,39 @@ async function delKK(no_kk) {
   const r = await apiPost("deleteKK", { no_kk });
   if (!r.ok) { alert(r.error); return; }
   goTab("warga");
+}
+
+/* ---- rumah ---- */
+async function submitRumah() {
+  const btn = document.getElementById("btnSimpanRumah");
+  const id = btn.dataset.id;
+  const payload = { nama: document.getElementById("fNamaRumah").value.trim(), catatan: document.getElementById("fCatatanRumah").value.trim() };
+  if (!payload.nama) { formError = "Nama rumah wajib diisi."; setScreen(rumahForm(id ? { id, ...payload } : null)); attachEvents(); return; }
+  if (id) payload.id = id;
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost(id ? "updateRumah" : "addRumah", payload);
+  if (!r.ok) { formError = r.error; setScreen(rumahForm(id ? payload : null)); attachEvents(); return; }
+  formError = "";
+  currentTab = "rumah";
+  await refreshRumah(); setScreen(screens.rumah()); attachEvents();
+}
+async function delRumah(id) {
+  if (!confirm("Hapus data rumah ini? Hanya bisa dihapus kalau tidak ada KK yang masih tertaut.")) return;
+  const r = await apiPost("deleteRumah", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshRumah(); setScreen(screens.rumah()); attachEvents();
+}
+async function submitRumahKK() {
+  const btn = document.getElementById("btnSimpanRumahKK");
+  const no_kk = btn.dataset.noKk;
+  const rr = await resolveRumahFromForm();
+  if (!rr.ok) { formError = rr.error; setScreen(rumahPickerFormKK(no_kk)); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost("setRumahKK", { no_kk, id_rumah: rr.id_rumah });
+  if (!r.ok) { alert(r.error); return; }
+  formError = "";
+  await refreshWarga();
+  openKK(no_kk);
 }
 
 /* ---- kas (RT & Jimpitan) ---- */
@@ -1519,16 +1634,16 @@ async function bayarTunggakan(no_kk) {
 /* ---- jimpitan ---- */
 async function submitJimpitan() {
   const btn = document.getElementById("btnSimpanJimpitan");
-  const pilih = document.getElementById("fRumahPilih").value;
-  let blok, no_rumah;
-  if (pilih && pilih !== "__manual__") { [blok, no_rumah] = pilih.split("|"); }
-  else { blok = document.getElementById("fBlok").value.trim(); no_rumah = document.getElementById("fNoRumah").value.trim(); }
-  const payload = {
-    tanggal: document.getElementById("fTanggal").value, blok, no_rumah,
-    jumlah: document.getElementById("fJumlah").value,
-    catatan: document.getElementById("fCatatan").value.trim()
-  };
-  if (!payload.tanggal || !payload.blok || !payload.no_rumah) { formError = "Tanggal dan rumah (blok + no. rumah) wajib diisi."; setScreen(jimpitanForm()); attachEvents(); return; }
+  const tanggal = document.getElementById("fTanggal").value;
+  const jumlah = document.getElementById("fJumlah").value;
+  const catatan = document.getElementById("fCatatan").value.trim();
+  if (!tanggal) { formError = "Tanggal wajib diisi."; setScreen(jimpitanForm()); attachEvents(); return; }
+  const selVal = document.getElementById("fRumahPilih").value;
+  if (!selVal) { formError = "Rumah wajib dipilih."; setScreen(jimpitanForm()); attachEvents(); return; }
+  const rr = await resolveRumahFromForm();
+  if (!rr.ok) { formError = rr.error; setScreen(jimpitanForm()); attachEvents(); return; }
+  if (!rr.id_rumah) { formError = "Rumah wajib dipilih."; setScreen(jimpitanForm()); attachEvents(); return; }
+  const payload = { tanggal, id_rumah: rr.id_rumah, jumlah, catatan };
   btn.disabled = true; btn.textContent = "Menyimpan…";
   const r = await apiPost("addJimpitanLog", payload);
   if (!r.ok) { formError = r.error; setScreen(jimpitanForm()); attachEvents(); return; }
