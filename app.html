@@ -131,6 +131,36 @@ nav button .ic{font-size:19px;}
 .cal .d.empty0{visibility:hidden;}
 .month-nav{display:flex; gap:8px; align-items:center; margin:12px 0;}
 .month-nav input{flex:1; padding:9px 10px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-family:inherit;}
+
+/* v8: statistik, desil, kondisi rumah, infrastruktur */
+.badge.desil{background:transparent; border:1px solid var(--green-light); color:var(--green);}
+.badge.mute{background:var(--line); color:var(--sub);}
+button.stat.tap{cursor:pointer; text-align:left; font-family:inherit; color:inherit; width:100%; position:relative;}
+button.stat.tap::after{content:"›"; position:absolute; right:12px; top:10px; color:var(--sub); font-size:16px;}
+button.stat.tap:active, .brow:active{background:var(--bg);}
+.stat .n{overflow-wrap:anywhere;}
+.list-link .lkn{font-family:'Fraunces',serif; font-weight:600; font-size:18px; margin:0 10px 0 8px; min-width:1ch; text-align:right;}
+.bars{display:flex; flex-direction:column; gap:2px;}
+.brow{display:grid; grid-template-columns:78px 1fr 34px; gap:10px; align-items:center; width:100%; background:none; border:none; padding:6px 2px; font-family:inherit; color:var(--ink); cursor:pointer; text-align:left; border-radius:8px;}
+.brow .bl{font-size:12.5px; color:var(--sub);}
+.brow .bt, .cover .bt{display:block; height:10px; background:var(--line); border-radius:99px; overflow:hidden;}
+.brow .bf, .cover .bf{display:block; height:100%; background:var(--green-light); border-radius:99px;}
+.brow.muted .bf{background:var(--gold);}
+.brow .bn{font-family:'Fraunces',serif; font-weight:600; font-size:15px; text-align:right;}
+.cover{margin-top:12px;} .cover .bt{height:6px;}
+.stack{display:flex; height:12px; border-radius:99px; overflow:hidden; background:var(--line); margin:8px 0 10px;}
+.stack span{display:block; height:100%;}
+.dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px;}
+.field .tog{display:flex; gap:6px;}
+.field .tog label{flex:1; margin:0; position:relative;}
+.tog input{position:absolute; opacity:0; pointer-events:none;}
+.tog span{display:block; text-align:center; padding:9px 6px; border-radius:10px; border:1px solid var(--line); background:var(--surface); font-size:13px; font-weight:600; color:var(--sub); cursor:pointer;}
+.tog input:checked + span.ok{background:#DCEBE0; color:var(--green); border-color:var(--green);}
+.tog input:checked + span.no{background:#F3DCD8; color:var(--brick); border-color:var(--brick);}
+.tog input:focus-visible + span{outline:2px solid var(--green-light);}
+@media (prefers-color-scheme: dark){ .tog input:checked + span.ok{background:#1E3A2A;} .tog input:checked + span.no{background:#3C2521;} }
+.btn-row input{flex:1; min-width:0; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-family:inherit; font-size:13.5px;}
+.btn-row a.btn{text-decoration:none;}
 </style>
 </head>
 <body>
@@ -239,6 +269,8 @@ const can = {
   viewRekapJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_bendahara"),
   bayarJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_bendahara"),
   manageRumah: () => session && (session.peran === "ketua" || session.peran === "sekretaris" || session.peran === "kt_ketua" || session.peran === "kt_bendahara"),
+  // v8: desil, kondisi rumah, bantuan sosial, infrastruktur — pendataan hanya Ketua & Sekretaris RT
+  pendataan: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
 };
 // alias supaya kode lama yang memanggil can.editKas() tetap berfungsi (Kas RT)
 can.editKas = can.editKasRT;
@@ -265,7 +297,8 @@ let cache = {
   pengumuman: [], surat: [], pengaduan: [], kt: [], kontak: [],
   kasJimpitan: { mutasi: [], saldo: 0 }, kasGerabah: { mutasi: [], saldo: 0 },
   pertemuan: [], iuran: [], rumah: [], jimpitanLog: [], jimpitanTotalBelum: 0,
-  tunggakan: [], tunggakanTotal: 0, inventaris: []
+  tunggakan: [], tunggakanTotal: 0, inventaris: [],
+  kondisi: {}, infra: [], infraRingkas: null
 };
 let loginMode = "pengurus";
 let formError = "";
@@ -328,7 +361,7 @@ function appShell() {
       <button data-tab="warga" class="${currentTab==='warga'?'active':''}"><span class="ic">👪</span>Warga</button>
       <button data-tab="kas" class="${currentTab==='kas'?'active':''}"><span class="ic">💰</span>Kas</button>
       <button data-tab="info" class="${currentTab==='info'?'active':''}"><span class="ic">📣</span>Info</button>
-      <button data-tab="lainnya" class="${['lainnya','surat','pengaduan','kt','kontak','jimpitan','akun','iuranrt','iuranrtDetail','tunggakan','inventaris','rumah','rekapjimpitan','rekapjimpitanDetail','rekapharian'].includes(currentTab)?'active':''}"><span class="ic">☰</span>Lainnya</button>
+      <button data-tab="lainnya" class="${['lainnya','surat','pengaduan','kt','kontak','jimpitan','akun','iuranrt','iuranrtDetail','tunggakan','inventaris','rumah','rekapjimpitan','rekapjimpitanDetail','rekapharian','statistik','statistikDetail','infra'].includes(currentTab)?'active':''}"><span class="ic">☰</span>Lainnya</button>
     </nav>`;
 }
 
@@ -360,7 +393,9 @@ async function loadAndShow(tab) {
     else if (tab === "rekapharian") { await refreshRekapHarian(); setScreen(screens.rekapharian()); }
     else if (tab === "tunggakan") { await refreshTunggakanRT(); setScreen(screens.tunggakan()); }
     else if (tab === "inventaris") { await refreshInventaris(); setScreen(screens.inventaris()); }
-    else if (tab === "rumah") { await refreshWarga(); setScreen(screens.rumah()); }
+    else if (tab === "rumah") { await refreshWarga(); await refreshKondisiRumah(); setScreen(screens.rumah()); }
+    else if (tab === "statistik") { await refreshStatistik(); setScreen(screens.statistik()); }
+    else if (tab === "infra") { await refreshInfra(); setScreen(screens.infra()); }
     else if (screens[tab]) setScreen(screens[tab]());
   } catch (err) {
     setScreen(`<div class="err">Gagal memuat data: ${esc(err.message)}</div>`);
@@ -511,7 +546,7 @@ function wargaKartu(k, m) {
     if (m.orang.length) p.push((m.angka ? "NIK: " : "") + m.orang.slice(0, 2).map(a => esc(a.nama) + (a.hub ? " (" + esc(a.hub) + ")" : "")).join(", ") + (m.orang.length > 2 ? " +" + (m.orang.length - 2) + " lainnya" : ""));
     cocok = `<div class="desc" style="color:var(--green); font-weight:600">Cocok ${p.join(" · ")}</div>`;
   }
-  const bdg = bantuanBadges(k.bantuan);
+  const bdg = desilBadge(k.desil) + bantuanBadges(k.bantuan);
   return `
     <button class="list-link" data-buka-kk="${esc(k.no_kk)}">
       <span class="txt"><div class="name">${esc(k.kepala)}</div>
@@ -594,6 +629,7 @@ const screens = {
         <div class="value-lg" style="font-size:16px">${esc(kkRec.nama_rumah || 'Belum ditautkan')}</div>
         ${can.manageRumah() ? `<button class="btn outline sm" style="margin-top:8px" data-ubah-rumah-kk="${esc(no_kk)}">Ubah Rumah</button>` : ''}
       </div>
+      ${desilKartuKK(no_kk)}
       <div id="kkAnggotaWrap" class="card"><div class="empty">Memuat anggota…</div></div>
       ${can.editWarga() ? `
       <div class="btn-row">
@@ -615,7 +651,8 @@ const screens = {
             <div class="row"><span class="item-title">${esc(r.nama)}</span><span class="item-sub">${r.jumlah_kk} KK</span></div>
             ${r.catatan ? `<div class="item-sub">${esc(r.catatan)}</div>` : ''}
             <div class="item-sub">Jimpitan: ${r.status_jimpitan==='bebas' ? '<b>dibebaskan</b>' : 'aktif'}${r.mulai_jimpitan ? ' · mulai '+fmtTanggal(r.mulai_jimpitan) : ''}</div>
-            ${manage ? `<div class="btn-row"><button class="btn outline sm" data-edit-rumah="${esc(r.id)}">Ubah</button><button class="btn brick sm" data-del-rumah="${esc(r.id)}">Hapus</button></div>` : ''}
+            ${can.pendataan() ? kondisiBlokRumah(r.id) : ''}
+            ${manage ? `<div class="btn-row"><button class="btn outline sm" data-edit-rumah="${esc(r.id)}">Ubah</button>${can.pendataan() ? `<button class="btn outline sm" data-kondisi-rumah="${esc(r.id)}">Kondisi</button>` : ''}<button class="btn brick sm" data-del-rumah="${esc(r.id)}">Hapus</button></div>` : ''}
           </div>`).join("") : '<div class="empty">Belum ada data rumah. Tambahkan lewat tombol di atas.</div>'}
       </div>`;
   },
@@ -662,6 +699,8 @@ const screens = {
       ...(can.manageIuranRT() ? [["🧾","Iuran RT","Rekap iuran per pertemuan Minggu Pahingan","iuranrt"]] : []),
       ...(can.inputJimpitan() || can.postJimpitan() ? [["📷","Jimpitan","Catat & posting jimpitan per rumah","jimpitan"]] : []),
       ...(can.manageRumah() ? [["🏘️","Data Rumah","Kelola daftar rumah untuk jimpitan","rumah"]] : []),
+      ["📊","Statistik RT","Ringkasan kependudukan, bantuan, rumah & jalan","statistik"],
+      ["🛣️","Infrastruktur RT","Jalan & titik perlu perbaikan","infra"],
       ["📦","Inventaris & Aset","Daftar barang RT & kondisinya","inventaris"],
       ["📇","Kontak Penting","Pengurus RT & layanan darurat","kontak"],
     ];
@@ -1597,6 +1636,383 @@ function inventarisForm(existing) {
 }
 
 /* ====================== EVENTS ====================== */
+/* ====================== v8: DESIL KK, KONDISI RUMAH, INFRASTRUKTUR RT, STATISTIK RT ====================== */
+const KONDISI_ASPEK = [["atap", "Atap"], ["dinding", "Dinding / rangka"], ["lantai", "Lantai"], ["ventilasi", "Ventilasi & pencahayaan"], ["mck", "MCK / sanitasi"]];
+const KESIMPULAN_RUMAH = { layak_huni: ["Layak huni", "ok"], perlu_perbaikan: ["Perlu perbaikan", "wait"], rtlh: ["Indikasi RTLH", "due"], belum_dinilai: ["Belum dinilai", "mute"] };
+const TANAH_LABEL = { milik_sah: "Milik sah", belum_jelas: "Belum jelas", sengketa_sewa: "Sengketa atau sewa tanpa dokumen" };
+const INFRA_JENIS = ["Jalan", "Gorong-gorong", "Drainase/selokan", "Lampu penerangan", "Jembatan", "Lainnya"];
+const INFRA_KONDISI = ["Baik", "Rusak ringan", "Rusak berat", "Belum ada"];
+const INFRA_PRIORITAS = ["Rendah", "Sedang", "Tinggi"];
+const INFRA_STATUS = ["Belum diusulkan", "Diusulkan", "Dikerjakan", "Selesai"];
+const INFRA_PERMUKAAN = ["Aspal", "Cor beton", "Paving", "Makadam", "Tanah"];
+const KONDISI_WARNA = { "Baik": "var(--green-light)", "Rusak ringan": "var(--gold)", "Rusak berat": "var(--brick)", "Belum ada": "var(--sub)" };
+const kondisiKelas = k => k === "Baik" ? "ok" : k === "Rusak ringan" ? "wait" : k === "Rusak berat" ? "due" : "mute";
+
+let statData = null, statDetailKey = "", infraFilter = "perbaikan";
+const angkaId = n => (Number(n) || 0).toLocaleString("id-ID", { maximumFractionDigits: 1 });
+const meter = n => angkaId(n) + " m";
+const petaUrl = (lat, lng) => "https://www.google.com/maps?q=" + encodeURIComponent(lat + "," + lng);
+const petaTombol = x => (x.latitude !== "" && x.longitude !== "" && x.latitude != null)
+  ? `<a class="btn outline sm" target="_blank" rel="noopener" href="${petaUrl(x.latitude, x.longitude)}">Buka di Google Maps</a>` : "";
+const hariIni = () => wibToday();
+
+/* ---------- Muat data ---------- */
+async function refreshKondisiRumah() {
+  cache.kondisi = {};
+  if (!can.pendataan()) return;
+  const r = await apiGet("getKondisiRumah");
+  if (r.ok) r.rumah.forEach(x => { cache.kondisi[x.id] = x; });
+}
+async function refreshInfra() {
+  const r = await apiGet("getInfrastruktur");
+  if (!r.ok) throw new Error(r.error);
+  cache.infra = r.infrastruktur; cache.infraRingkas = r.ringkasan;
+}
+async function refreshStatistik() {
+  const r = await apiGet("getStatistik");
+  if (!r.ok) throw new Error(r.error);
+  statData = r;
+}
+
+/* ---------- Desil KK ---------- */
+function desilBadge(d) { return (d === "" || d == null) ? "" : `<span class="badge desil">Desil ${esc(d)}</span>`; }
+function desilKartuKK(no_kk) {
+  const k = cache.kk.find(x => String(x.no_kk) === String(no_kk)) || {};
+  if (k.desil === undefined) return ""; // server tidak mengirim desil untuk yang tidak berhak
+  const ada = k.desil !== "" && k.desil != null;
+  return `
+    <div class="card" style="margin-bottom:12px">
+      <div class="row"><span class="label">Desil kesejahteraan (DTSEN)</span>${ada ? desilBadge(k.desil) : '<span class="badge mute">Belum dicek</span>'}</div>
+      <div class="item-sub" style="margin-top:6px">${ada ? "Dicek " + fmtTanggal(k.tanggal_cek_desil) + ". Desil 1 = paling rendah tingkat kesejahteraannya, 10 = paling tinggi. Desil bukan jaminan menerima bantuan." : "Belum ada hasil pengecekan desil untuk KK ini."}</div>
+      ${can.editWarga() ? `<button class="btn outline sm" style="margin-top:8px" data-ubah-desil="${esc(no_kk)}">${ada ? "Ubah desil" : "Catat desil"}</button>` : ""}
+    </div>`;
+}
+function desilForm(no_kk, v) {
+  const k = cache.kk.find(x => String(x.no_kk) === String(no_kk)) || {};
+  v = v || { desil: k.desil, tanggal_cek: k.tanggal_cek_desil };
+  const opsi = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<option value="${n}" ${String(v.desil) === String(n) ? "selected" : ""}>Desil ${n}${n === 1 ? " (paling rendah)" : n === 10 ? " (paling tinggi)" : ""}</option>`).join("");
+  return `
+    <button class="back" data-back-kk="${esc(no_kk)}">‹ Batal</button>
+    <h2 class="title">Desil KK — ${esc(k.kepala || no_kk)}</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="mask-note" style="margin:-4px 0 12px">Isi dari hasil cek NIK kepala keluarga di <b>cekbansos.kemensos.go.id</b>. Tanggal cek dicatat karena desil bisa berubah saat DTSEN diperbarui.</div>
+    <div class="field"><label>Desil</label>
+      <select id="fDesil"><option value="">— Belum dicek —</option>${opsi}</select></div>
+    <div class="field"><label>Tanggal cek</label><input id="fDesilTgl" type="date" value="${esc(v.tanggal_cek || hariIni())}"></div>
+    <button class="btn block" id="btnSimpanDesil" data-no-kk="${esc(no_kk)}">Simpan</button>`;
+}
+async function submitDesil() {
+  const btn = document.getElementById("btnSimpanDesil"), no_kk = btn.dataset.noKk;
+  const desil = document.getElementById("fDesil").value, tanggal_cek = document.getElementById("fDesilTgl").value;
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost("setDesilKK", { no_kk, desil, tanggal_cek });
+  if (!r.ok) { formError = r.error; setScreen(desilForm(no_kk, { desil, tanggal_cek })); attachEvents(); return; }
+  formError = "";
+  await refreshWarga();
+  openKK(no_kk);
+}
+
+/* ---------- Kondisi rumah & kelayakan bedah rumah ---------- */
+function kesimpulanRumah(nilai) {
+  const tidak = KONDISI_ASPEK.filter(a => nilai[a[0]] === "tidak_layak").length;
+  const terisi = KONDISI_ASPEK.filter(a => nilai[a[0]]).length;
+  if (tidak >= 3) return "rtlh";
+  if (terisi === KONDISI_ASPEK.length) return tidak === 0 ? "layak_huni" : "perlu_perbaikan";
+  return "belum_dinilai";
+}
+function kondisiBlokRumah(id) {
+  const k = cache.kondisi && cache.kondisi[id];
+  if (!k) return "";
+  const [lbl, kls] = KESIMPULAN_RUMAH[k.kesimpulan] || KESIMPULAN_RUMAH.belum_dinilai;
+  const kand = k.kandidat === "kandidat" ? '<span class="badge wait">Kandidat bedah rumah</span>' : k.kandidat === "perlu_cek_desil" ? '<span class="badge mute">Perlu cek desil</span>' : "";
+  return `<div style="margin-top:5px"><span class="badge ${kls}">${lbl}</span> ${kand}</div>`;
+}
+function kondisiRumahForm(id, isian) {
+  const rumah = cache.rumah.find(r => r.id === id) || {};
+  const k = isian || (cache.kondisi && cache.kondisi[id]) || {};
+  const pernah = k.pernah_bantuan !== undefined ? k.pernah_bantuan : !!k.riwayat_bantuan_rumah;
+  const tahun = k.riwayat_bantuan_rumah && k.riwayat_bantuan_rumah !== "Ya" ? k.riwayat_bantuan_rumah : "";
+  const toggles = KONDISI_ASPEK.map(([kode, nama]) => `
+    <div class="field"><label>${esc(nama)}</label>
+      <div class="tog">
+        <label><input type="radio" name="ka_${kode}" value="layak" ${k[kode] === "layak" ? "checked" : ""}><span class="ok">Layak</span></label>
+        <label><input type="radio" name="ka_${kode}" value="tidak_layak" ${k[kode] === "tidak_layak" ? "checked" : ""}><span class="no">Tidak layak</span></label>
+      </div></div>`).join("");
+  return `
+    <button class="back" data-back-tab="rumah">‹ Batal</button>
+    <h2 class="title">Kondisi Rumah</h2>
+    <div class="item-sub" style="margin:-8px 0 12px; font-weight:600">${esc(rumah.nama || "")}</div>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="mask-note" style="margin:0 0 10px">Penilaian ini hanya indikasi awal untuk memprioritaskan pendataan. Penetapan resmi calon penerima bedah rumah (BSPS) tetap lewat survei lapangan pemerintah desa dan fasilitator program.</div>
+    ${toggles}
+    <div class="card" id="krPreview" style="padding:10px 14px"></div>
+    <div class="field"><label>Status tanah</label>
+      <select id="fKrTanah"><option value="">— pilih —</option>${Object.keys(TANAH_LABEL).map(t => `<option value="${t}" ${k.status_tanah === t ? "selected" : ""}>${esc(TANAH_LABEL[t])}</option>`).join("")}</select></div>
+    <div class="field"><label>Apakah ini satu-satunya rumah yang dimiliki?</label>
+      <select id="fKrSatu"><option value="">— pilih —</option><option value="ya" ${k.rumah_satu_satunya === "ya" ? "selected" : ""}>Ya, satu-satunya</option><option value="tidak" ${k.rumah_satu_satunya === "tidak" ? "selected" : ""}>Tidak, punya rumah lain</option></select></div>
+    <div class="field"><label class="chk"><input type="checkbox" id="fKrPernah" ${pernah ? "checked" : ""}> Pernah menerima bantuan perumahan</label>
+      <input id="fKrTahun" inputmode="numeric" maxlength="4" placeholder="Tahun (opsional), mis. 2019" value="${esc(tahun)}" style="display:${pernah ? "block" : "none"}"></div>
+    <div class="field"><label>Koordinat GPS <span class="opt">(opsional, ambil saat berada di rumah tersebut)</span></label>
+      <div class="btn-row" style="margin:0 0 6px"><input id="fKrLat" inputmode="decimal" placeholder="Latitude" value="${esc(k.latitude === "" || k.latitude == null ? "" : k.latitude)}"><input id="fKrLng" inputmode="decimal" placeholder="Longitude" value="${esc(k.longitude === "" || k.longitude == null ? "" : k.longitude)}"></div>
+      <button type="button" class="btn outline sm" data-gps="fKrLat,fKrLng,krGpsInfo">📍 Ambil lokasi saat ini</button>
+      <div class="mask-note" id="krGpsInfo"></div></div>
+    <button class="btn block" id="btnSimpanKondisi" data-id="${esc(id)}">Simpan penilaian</button>`;
+}
+function krNilaiDariForm() {
+  const n = {};
+  KONDISI_ASPEK.forEach(([kode]) => { const c = document.querySelector(`input[name="ka_${kode}"]:checked`); n[kode] = c ? c.value : ""; });
+  return n;
+}
+function krIsianDariForm() {
+  const v = id => (document.getElementById(id) || {}).value || "";
+  const pernah = !!(document.getElementById("fKrPernah") || {}).checked;
+  return Object.assign(krNilaiDariForm(), {
+    status_tanah: v("fKrTanah"), rumah_satu_satunya: v("fKrSatu"), pernah_bantuan: pernah,
+    riwayat_bantuan_rumah: pernah ? (v("fKrTahun").trim() || "Ya") : "", latitude: v("fKrLat").trim(), longitude: v("fKrLng").trim()
+  });
+}
+function bindKondisiForm() {
+  const box = document.getElementById("krPreview");
+  if (!box) return;
+  const upd = () => {
+    const n = krNilaiDariForm(), tidak = KONDISI_ASPEK.filter(a => n[a[0]] === "tidak_layak").length, [lbl, kls] = KESIMPULAN_RUMAH[kesimpulanRumah(n)];
+    box.innerHTML = `<div class="row"><span class="label">Kesimpulan otomatis</span><span class="badge ${kls}">${lbl}</span></div><div class="mask-note">${tidak} dari 5 aspek fisik tidak layak. 0 = layak huni · 1–2 = perlu perbaikan · 3 atau lebih = indikasi RTLH.</div>`;
+  };
+  document.querySelectorAll('.tog input').forEach(i => i.addEventListener("change", upd));
+  const pernah = document.getElementById("fKrPernah"), tahun = document.getElementById("fKrTahun");
+  if (pernah) pernah.addEventListener("change", () => { tahun.style.display = pernah.checked ? "block" : "none"; });
+  upd();
+}
+async function submitKondisiRumah() {
+  const btn = document.getElementById("btnSimpanKondisi"), id = btn.dataset.id, isian = krIsianDariForm();
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost("setKondisiRumah", Object.assign({ id }, isian));
+  if (!r.ok) { formError = r.error; setScreen(kondisiRumahForm(id, isian)); attachEvents(); return; }
+  formError = ""; currentTab = "rumah";
+  await Promise.all([refreshWarga(), refreshKondisiRumah()]);
+  setScreen(screens.rumah()); attachEvents();
+}
+
+/* ---------- GPS (dipakai form rumah & infrastruktur) ---------- */
+function ambilLokasi(btn) {
+  const [latId, lngId, infoId] = btn.dataset.gps.split(",");
+  const info = document.getElementById(infoId);
+  if (!navigator.geolocation) { if (info) info.textContent = "Perangkat/browser ini tidak mendukung GPS."; return; }
+  const teks = btn.textContent; btn.disabled = true; btn.textContent = "Mencari lokasi…";
+  navigator.geolocation.getCurrentPosition(pos => {
+    document.getElementById(latId).value = pos.coords.latitude.toFixed(6);
+    document.getElementById(lngId).value = pos.coords.longitude.toFixed(6);
+    btn.disabled = false; btn.textContent = teks;
+    if (info) info.textContent = "Lokasi terambil, akurasi sekitar ±" + Math.round(pos.coords.accuracy) + " m. Untuk hasil lebih tepat, ambil ulang di titik yang dimaksud.";
+  }, err => {
+    btn.disabled = false; btn.textContent = teks;
+    if (info) info.textContent = err.code === 1 ? "Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini di pengaturan browser." : "Gagal mengambil lokasi. Coba lagi di tempat terbuka.";
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
+
+/* ---------- Infrastruktur RT ---------- */
+function infraTitikUrut(list) {
+  const pr = { Tinggi: 3, Sedang: 2, Rendah: 1 }, kr = { "Rusak berat": 3, "Belum ada": 2, "Rusak ringan": 1 };
+  return list.filter(x => x.kondisi !== "Baik" && x.status_penanganan !== "Selesai")
+    .sort((a, b) => (pr[b.prioritas] || 0) - (pr[a.prioritas] || 0) || (kr[b.kondisi] || 0) - (kr[a.kondisi] || 0) || String(a.nama).localeCompare(String(b.nama)));
+}
+function infraKartu(x) {
+  const edit = can.pendataan();
+  return `
+    <div class="item">
+      <div class="row"><span class="item-title">${esc(x.nama)}</span><span class="badge ${kondisiKelas(x.kondisi)}">${esc(x.kondisi)}</span></div>
+      <div class="item-sub">${esc(x.jenis)}${x.jenis === "Jalan" ? (x.panjang_m !== "" ? " · " + meter(x.panjang_m) : "") + (x.permukaan ? " · " + esc(x.permukaan) : "") : ""}</div>
+      <div class="item-sub">Prioritas ${esc(x.prioritas.toLowerCase())} · ${esc(x.status_penanganan)}</div>
+      ${x.keterangan ? `<div class="item-sub" style="margin-top:3px">${esc(x.keterangan)}</div>` : ""}
+      <div class="btn-row">${petaTombol(x)}${edit ? `<button class="btn outline sm" data-edit-infra="${esc(x.id)}">Ubah</button><button class="btn brick sm" data-del-infra="${esc(x.id)}">Hapus</button>` : ""}</div>
+    </div>`;
+}
+function infraScreen() {
+  const list = cache.infra || [], rg = cache.infraRingkas || { jumlah_ruas: 0, total_panjang_m: 0, panjang_per_kondisi: {}, jumlah_titik: 0 };
+  const chips = [["perbaikan", "Perlu perbaikan"], ["", "Semua"]].concat(INFRA_JENIS.map(j => [j, j]));
+  let tampil;
+  if (infraFilter === "perbaikan") tampil = infraTitikUrut(list);
+  else tampil = list.filter(x => !infraFilter || x.jenis === infraFilter).sort((a, b) => INFRA_JENIS.indexOf(a.jenis) - INFRA_JENIS.indexOf(b.jenis) || String(a.nama).localeCompare(String(b.nama)));
+  return `
+    <button class="back" data-back-tab="lainnya">‹ Kembali</button>
+    <div class="section-tag">LINGKUNGAN RT</div>
+    <h2 class="title">Infrastruktur RT</h2>
+    <div class="mask-note" style="margin-top:-6px">Jalan dan fasilitas umum beserta kondisinya, sebagai bahan usulan pembangunan/perbaikan ke desa.</div>
+    <div class="stat-grid" style="margin-top:12px">
+      <div class="stat"><div class="n">${rg.jumlah_ruas}</div><div class="l">Ruas jalan · ${meter(rg.total_panjang_m)}</div></div>
+      <div class="stat"><div class="n">${rg.jumlah_titik}</div><div class="l">Titik perlu perbaikan/ pembangunan</div></div>
+    </div>
+    ${can.pendataan() ? '<button class="btn gold block" id="btnTambahInfra">+ Tambah jalan / titik</button>' : ""}
+    <div class="chips" style="margin-top:12px">${chips.map(c => `<button class="chip ${infraFilter === c[0] ? "active" : ""}" data-infra-filter="${esc(c[0])}">${esc(c[1])}</button>`).join("")}</div>
+    <div class="card" style="padding:4px 12px; margin-top:6px">
+      ${tampil.length ? tampil.map(infraKartu).join("") : `<div class="empty">${infraFilter === "perbaikan" ? (list.length ? "Tidak ada titik yang perlu perbaikan." : "Belum ada data infrastruktur.") : "Belum ada data untuk pilihan ini."}</div>`}
+    </div>
+    ${infraFilter === "perbaikan" && tampil.length ? '<div class="mask-note">Urutan: prioritas tertinggi dulu, lalu tingkat kerusakan. Yang berstatus Selesai tidak ditampilkan.</div>' : ""}`;
+}
+function infraForm(v) {
+  v = v || {};
+  const jenis = v.jenis || "Jalan";
+  const sel = (arr, cur) => arr.map(o => `<option ${cur === o ? "selected" : ""}>${esc(o)}</option>`).join("");
+  return `
+    <button class="back" data-back-tab="infra">‹ Batal</button>
+    <h2 class="title">${v.id ? "Ubah Data" : "Tambah Data"} Infrastruktur</h2>
+    ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
+    <div class="field"><label>Jenis</label><select id="fInfJenis">${sel(INFRA_JENIS, jenis)}</select></div>
+    <div class="field"><label>Nama / patokan <span style="color:var(--brick)">*wajib</span></label><input id="fInfNama" value="${esc(v.nama || "")}" placeholder="Gang Mawar, depan rumah Bu Sri"></div>
+    <div class="field"><label>Kondisi</label><select id="fInfKondisi">${sel(INFRA_KONDISI, v.kondisi || "Baik")}</select></div>
+    <div class="field"><label>Prioritas</label><select id="fInfPrioritas">${sel(INFRA_PRIORITAS, v.prioritas || "Sedang")}</select></div>
+    <div class="field"><label>Status penanganan</label><select id="fInfStatus">${sel(INFRA_STATUS, v.status_penanganan || "Belum diusulkan")}</select></div>
+    <div id="fInfJalanWrap" style="display:${jenis === "Jalan" ? "block" : "none"}">
+      <div class="field"><label>Panjang (meter)</label><input id="fInfPanjang" inputmode="decimal" value="${esc(v.panjang_m === "" || v.panjang_m == null ? "" : v.panjang_m)}" placeholder="120"></div>
+      <div class="field"><label>Jenis permukaan</label><select id="fInfPermukaan"><option value="">— pilih —</option>${sel(INFRA_PERMUKAAN, v.permukaan)}</select></div>
+    </div>
+    <div class="field"><label>Keterangan / usulan <span class="opt">(opsional)</span></label><input id="fInfKet" value="${esc(v.keterangan || "")}" placeholder="Usul cor beton 3 m x 120 m"></div>
+    <div class="field"><label>Koordinat GPS <span class="opt">(opsional, ambil di lokasi)</span></label>
+      <div class="btn-row" style="margin:0 0 6px"><input id="fInfLat" inputmode="decimal" placeholder="Latitude" value="${esc(v.latitude === "" || v.latitude == null ? "" : v.latitude)}"><input id="fInfLng" inputmode="decimal" placeholder="Longitude" value="${esc(v.longitude === "" || v.longitude == null ? "" : v.longitude)}"></div>
+      <button type="button" class="btn outline sm" data-gps="fInfLat,fInfLng,infGpsInfo">📍 Ambil lokasi saat ini</button>
+      <div class="mask-note" id="infGpsInfo"></div></div>
+    <button class="btn block" id="btnSimpanInfra" data-id="${esc(v.id || "")}">Simpan</button>`;
+}
+function infraIsianDariForm() {
+  const v = id => (document.getElementById(id) || {}).value || "";
+  const jenis = v("fInfJenis");
+  return { jenis, nama: v("fInfNama").trim(), kondisi: v("fInfKondisi"), prioritas: v("fInfPrioritas"), status_penanganan: v("fInfStatus"),
+    keterangan: v("fInfKet").trim(), panjang_m: jenis === "Jalan" ? v("fInfPanjang").trim() : "", permukaan: jenis === "Jalan" ? v("fInfPermukaan") : "",
+    latitude: v("fInfLat").trim(), longitude: v("fInfLng").trim() };
+}
+function bindInfraForm() {
+  const j = document.getElementById("fInfJenis"), w = document.getElementById("fInfJalanWrap");
+  if (j && w) j.addEventListener("change", () => { w.style.display = j.value === "Jalan" ? "block" : "none"; });
+}
+async function submitInfra() {
+  const btn = document.getElementById("btnSimpanInfra"), id = btn.dataset.id, isian = infraIsianDariForm();
+  if (!isian.nama) { formError = "Nama/patokan wajib diisi."; setScreen(infraForm(Object.assign({ id }, isian))); attachEvents(); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost(id ? "updateInfrastruktur" : "addInfrastruktur", Object.assign(id ? { id } : {}, isian));
+  if (!r.ok) { formError = r.error; setScreen(infraForm(Object.assign({ id }, isian))); attachEvents(); return; }
+  formError = ""; currentTab = "infra";
+  await refreshInfra(); setScreen(infraScreen()); attachEvents();
+}
+async function delInfra(id) {
+  if (!confirm("Hapus data infrastruktur ini?")) return;
+  const r = await apiPost("deleteInfrastruktur", { id });
+  if (!r.ok) { alert(r.error); return; }
+  await refreshInfra(); setScreen(infraScreen()); attachEvents();
+}
+
+/* ---------- Statistik RT ---------- */
+function statTile(n, label, key) {
+  const isi = `<div class="n">${esc(n)}</div><div class="l">${esc(label)}</div>`;
+  return key ? `<button class="stat tap" data-stat-detail="${esc(key)}">${isi}</button>` : `<div class="stat">${isi}</div>`;
+}
+function statBaris(nama, ket, angka, key) {
+  return `<button class="list-link" data-stat-detail="${esc(key)}"><span class="txt"><div class="name">${esc(nama)}</div>${ket ? `<div class="desc">${esc(ket)}</div>` : ""}</span><span class="lkn">${esc(angka)}</span><span class="chev">›</span></button>`;
+}
+function statistikScreen() {
+  const d = statData;
+  if (!d) return '<div class="empty">Memuat…</div>';
+  const kp = d.kependudukan, pm = d.perumahan, inf = d.infrastruktur;
+  let h = `
+    <button class="back" data-back-tab="lainnya">‹ Kembali</button>
+    <div class="section-tag">RINGKASAN KONDISI RT</div>
+    <h2 class="title">Statistik RT</h2>
+    <div class="stat-grid">${statTile(kp.kk, "Kepala Keluarga")}${statTile(kp.jiwa, "Jiwa terdata")}</div>
+    <h2 class="title" style="margin-top:6px">Perumahan</h2>
+    <div class="stat-grid">${statTile(pm.jumlah_rumah, "Rumah terdata")}${d.rincian ? statTile(pm.kandidat_bedah, "Kandidat bedah rumah", "rumah:kandidat") : ""}</div>`;
+  if (d.rincian) {
+    const k = pm.kondisi;
+    h += `<div class="card" style="padding:4px 12px">
+      ${["layak_huni", "perlu_perbaikan", "rtlh", "belum_dinilai"].map(c => statBaris(KESIMPULAN_RUMAH[c][0], "", k[c], "rumah:" + c)).join("")}
+      </div>
+      ${pm.perlu_cek_desil ? `<div class="mask-note" style="margin:-4px 0 12px"><button class="chip" data-stat-detail="rumah:perlu_cek_desil">${pm.perlu_cek_desil} rumah perlu cek desil ›</button></div>` : ""}
+      <div class="mask-note" style="margin-bottom:14px">Kandidat bedah rumah hanyalah indikasi untuk memprioritaskan pendataan (RTLH, tanah milik sah, rumah satu-satunya, belum pernah dapat bantuan rumah, dan desil ≤ ${d.ambang.bedah}). Penetapan resmi lewat survei lapangan.</div>`;
+    const ks = d.kesejahteraan, ds = ks.desil, maks = Math.max(1, ...Object.values(ds.jumlah)), persen = ds.total_kk ? Math.round(ds.terisi / ds.total_kk * 100) : 0;
+    const baris = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "belum"].map(i => {
+      const n = ds.jumlah[i];
+      return `<button class="brow ${i === "belum" ? "muted" : ""}" data-stat-detail="desil:${i}"><span class="bl">${i === "belum" ? "Belum dicek" : "Desil " + i}</span><span class="bt"><span class="bf" style="width:${Math.round(n / maks * 100)}%"></span></span><span class="bn">${n}</span></button>`;
+    }).join("");
+    h += `
+    <h2 class="title" style="margin-top:6px">Kesejahteraan &amp; Bantuan</h2>
+    <div class="card">
+      <div class="row"><span class="label">KK menurut desil</span></div>
+      <div class="bars" style="margin-top:6px">${baris}</div>
+      <div class="cover"><span class="bt"><span class="bf" style="width:${persen}%"></span></span></div>
+      <div class="mask-note">Desil terisi ${ds.terisi} dari ${ds.total_kk} KK (${persen}%). Semakin lengkap, semakin bisa dipercaya angka di bawah.</div>
+    </div>
+    <div class="label" style="margin:14px 0 4px">Penerima per program bantuan</div>
+    <div class="card" style="padding:4px 12px">
+      ${["PKH", "BPNT", "BLT", "PBI-JK", "PIP", "Lainnya"].map(c => statBaris(c, ks.bantuan[c].kk + " KK · " + ks.bantuan[c].orang + " orang", ks.bantuan[c].kk, "bantuan:" + c)).join("")}
+    </div>
+    <div class="label" style="margin:14px 0 4px">KK layak tetapi belum menerima</div>
+    <div class="card" style="padding:4px 12px">
+      ${["PKH", "BPNT"].map(c => statBaris(c + " — berpotensi diusulkan", "Desil ≤ " + ks.layak_belum_menerima[c].ambang + ", belum ada anggota penerima " + c, ks.layak_belum_menerima[c].jumlah, "layak:" + c)).join("")}
+    </div>
+    <div class="mask-note">Diberi label <b>berpotensi diusulkan</b>, bukan &ldquo;berhak&rdquo;: desil bukan jaminan dan ada syarat lain yang tidak tercatat di aplikasi. ${ks.layak_belum_menerima.belum_dicek} KK belum dicek desilnya sehingga <b>tidak dihitung</b>. PBI-JK, PIP, dan BLT belum dihitung karena data pendukungnya belum ada.</div>`;
+  } else {
+    h += `<div class="mask-note" style="margin-bottom:14px">Rincian kondisi rumah, desil, dan bantuan sosial hanya untuk Ketua &amp; Sekretaris RT.</div>`;
+  }
+  const pk = inf.panjang_per_kondisi, tot = inf.total_panjang_m;
+  h += `
+    <h2 class="title" style="margin-top:6px">Infrastruktur</h2>
+    <div class="stat-grid">${statTile(inf.jumlah_ruas, "Ruas jalan", "infra:jalan")}${statTile(meter(tot), "Total panjang jalan")}</div>
+    <div class="card">
+      <div class="label">Panjang jalan menurut kondisi</div>
+      <div class="stack">${tot ? INFRA_KONDISI.filter(c => pk[c] > 0).map(c => `<span style="width:${pk[c] / tot * 100}%; background:${KONDISI_WARNA[c]}"></span>`).join("") : ""}</div>
+      ${INFRA_KONDISI.map(c => `<div class="row" style="margin-top:4px"><span class="item-sub"><i class="dot" style="background:${KONDISI_WARNA[c]}"></i>${c}</span><span class="item-sub"><b>${meter(pk[c] || 0)}</b></span></div>`).join("")}
+    </div>
+    <div class="stat-grid">${statTile(inf.jumlah_titik, "Titik perlu perbaikan/ pembangunan", "infra:titik")}</div>
+    <button class="btn outline block" data-open-sub="infra">Buka data Infrastruktur RT</button>`;
+  if (d.rincian && d.ambang) h += ambangCard(d);
+  return h;
+}
+function ambangCard(d) {
+  const ubah = d.bisa_ubah_ambang, a = d.ambang;
+  const pilih = (id, cur) => `<select id="${id}" ${ubah ? "" : "disabled"}>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<option ${n === cur ? "selected" : ""}>${n}</option>`).join("")}</select>`;
+  return `
+    <h2 class="title" style="margin-top:20px">Ambang desil</h2>
+    <div class="card">
+      <div class="field"><label>Layak PKH: desil paling tinggi</label>${pilih("fAmbPkh", a.pkh)}</div>
+      <div class="field"><label>Layak BPNT: desil paling tinggi</label>${pilih("fAmbBpnt", a.bpnt)}</div>
+      <div class="field"><label>Kandidat bedah rumah: desil paling tinggi</label>${pilih("fAmbBedah", a.bedah)}</div>
+      <div class="mask-note">Batas per program berbeda-beda antar sumber dan bisa berubah. Sebaiknya dikonfirmasi ke pendamping PKH atau dinas sosial setempat.${ubah ? "" : " Hanya Ketua RT yang dapat mengubah."}</div>
+      ${ubah ? '<button class="btn block" id="btnSimpanAmbang" style="margin-top:10px">Simpan ambang</button>' : ""}
+    </div>`;
+}
+async function submitAmbang() {
+  const btn = document.getElementById("btnSimpanAmbang"), val = id => document.getElementById(id).value;
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  const r = await apiPost("setAmbangDesil", { pkh: val("fAmbPkh"), bpnt: val("fAmbBpnt"), bedah: val("fAmbBedah") });
+  if (!r.ok) { alert(r.error); btn.disabled = false; btn.textContent = "Simpan ambang"; return; }
+  await refreshStatistik(); setScreen(statistikScreen()); attachEvents();
+}
+function statDetailData(key) {
+  const d = statData || {}, p = String(key).split(":"), jenis = p[0], sub = p.slice(1).join(":");
+  if (jenis === "desil") return { title: sub === "belum" ? "KK belum dicek desilnya" : "KK dengan Desil " + sub, items: d.kesejahteraan.desil.daftar[sub] || [] };
+  if (jenis === "rumah") {
+    const judul = { kandidat: "Kandidat bedah rumah", perlu_cek_desil: "Rumah perlu cek desil", layak_huni: "Rumah layak huni", perlu_perbaikan: "Rumah perlu perbaikan", rtlh: "Rumah indikasi RTLH", belum_dinilai: "Rumah belum dinilai" };
+    return { title: judul[sub], note: sub === "kandidat" ? "Hanya indikasi awal. Penetapan resmi lewat survei lapangan pemerintah desa dan fasilitator program." : sub === "perlu_cek_desil" ? "Syarat kondisi & administrasi terpenuhi, tetapi desil KK penghuni belum diisi atau belum lolos ambang." : "", items: d.perumahan.daftar[sub] || [] };
+  }
+  if (jenis === "bantuan") return { title: "Penerima " + sub, note: "Dihitung per KK. Keterangan menunjukkan anggota penerima di KK tersebut.", items: d.kesejahteraan.bantuan[sub].daftar };
+  if (jenis === "layak") return { title: "Berpotensi diusulkan " + sub, note: "Bukan berarti berhak: desil bukan jaminan dan ada syarat lain yang tidak tercatat di aplikasi. KK tanpa desil tidak dihitung.", items: d.kesejahteraan.layak_belum_menerima[sub].daftar };
+  const inf = d.infrastruktur;
+  const ubah = x => ({ t: x.nama + " (" + x.jenis + ")", s: [x.kondisi, "prioritas " + x.prioritas.toLowerCase(), x.status_penanganan].concat(x.jenis === "Jalan" && x.panjang_m !== "" ? [meter(x.panjang_m)] : []).join(" · "), lat: x.latitude, lng: x.longitude });
+  if (sub === "titik") return { title: "Titik perlu perbaikan/ pembangunan", note: "Urut prioritas, lalu tingkat kerusakan.", items: inf.titik.map(ubah) };
+  return { title: "Ruas jalan", items: inf.jalan.map(ubah) };
+}
+function statistikDetailScreen() {
+  const x = statDetailData(statDetailKey);
+  return `
+    <button class="back" data-back-stat="1">‹ Kembali ke Statistik</button>
+    <h2 class="title">${esc(x.title)}</h2>
+    <div class="mask-note" style="margin:-8px 0 10px">${x.items.length} data${x.note ? " · " + esc(x.note) : ""}</div>
+    <div class="card" style="padding:4px 12px">
+      ${x.items.length ? x.items.map(i => `<div class="item"><div class="item-title">${esc(i.t)}</div>${i.s ? `<div class="item-sub">${esc(i.s)}</div>` : ""}${(i.lat !== undefined && i.lat !== "" && i.lat != null) ? `<div class="btn-row">${petaTombol({ latitude: i.lat, longitude: i.lng })}</div>` : ""}</div>`).join("") : '<div class="empty">Tidak ada data.</div>'}
+    </div>`;
+}
+screens.statistik = statistikScreen;
+screens.statistikDetail = statistikDetailScreen;
+screens.infra = infraScreen;
+
 function attachEvents() {
   const q = sel => document.querySelector(sel);
   const qa = sel => Array.from(document.querySelectorAll(sel));
@@ -1604,7 +2020,7 @@ function attachEvents() {
   q("#btnLoginPengurus") && q("#btnLoginPengurus").addEventListener("click", doLoginPengurus);
   q("#btnLoginWarga") && q("#btnLoginWarga").addEventListener("click", doLoginWarga);
   qa("[data-mode]").forEach(b => b.addEventListener("click", () => { loginMode = b.dataset.mode; formError = ""; render(); }));
-  q("#btnLogout") && q("#btnLogout").addEventListener("click", () => { clearSession(); resetWargaCari(); currentTab = "beranda"; render(); });
+  q("#btnLogout") && q("#btnLogout").addEventListener("click", () => { clearSession(); resetWargaCari(); statData = null; cache.kondisi = {}; currentTab = "beranda"; render(); });
 
   qa("[data-tab]").forEach(b => b.addEventListener("click", () => goTab(b.dataset.tab)));
   qa("[data-open-sub]").forEach(b => b.addEventListener("click", () => { currentTab = b.dataset.openSub; render(); loadAndShow(b.dataset.openSub); }));
@@ -1722,6 +2138,26 @@ function attachEvents() {
   }));
   q("#btnSimpanInventaris") && q("#btnSimpanInventaris").addEventListener("click", submitInventaris);
   qa("[data-del-inventaris]").forEach(b => b.addEventListener("click", () => delInventaris(b.dataset.delInventaris)));
+
+  /* ---- v8: desil, kondisi rumah, infrastruktur, statistik ---- */
+  qa("[data-ubah-desil]").forEach(b => b.addEventListener("click", () => { formError=""; setScreen(desilForm(b.dataset.ubahDesil)); attachEvents(); }));
+  q("#btnSimpanDesil") && q("#btnSimpanDesil").addEventListener("click", submitDesil);
+  qa("[data-kondisi-rumah]").forEach(b => b.addEventListener("click", () => { formError=""; setScreen(kondisiRumahForm(b.dataset.kondisiRumah)); attachEvents(); }));
+  q("#btnSimpanKondisi") && q("#btnSimpanKondisi").addEventListener("click", submitKondisiRumah);
+  bindKondisiForm();
+  qa("[data-gps]").forEach(b => b.addEventListener("click", () => ambilLokasi(b)));
+  q("#btnTambahInfra") && q("#btnTambahInfra").addEventListener("click", () => { formError=""; setScreen(infraForm()); attachEvents(); });
+  qa("[data-edit-infra]").forEach(b => b.addEventListener("click", () => {
+    const x = cache.infra.find(i => i.id === b.dataset.editInfra);
+    formError = ""; setScreen(infraForm(x)); attachEvents();
+  }));
+  qa("[data-del-infra]").forEach(b => b.addEventListener("click", () => delInfra(b.dataset.delInfra)));
+  qa("[data-infra-filter]").forEach(b => b.addEventListener("click", () => { infraFilter = b.dataset.infraFilter; setScreen(infraScreen()); attachEvents(); }));
+  q("#btnSimpanInfra") && q("#btnSimpanInfra").addEventListener("click", submitInfra);
+  bindInfraForm();
+  qa("[data-stat-detail]").forEach(b => b.addEventListener("click", () => { statDetailKey = b.dataset.statDetail; currentTab = "statistikDetail"; render(); setScreen(statistikDetailScreen()); attachEvents(); window.scrollTo(0, 0); }));
+  qa("[data-back-stat]").forEach(b => b.addEventListener("click", () => { currentTab = "statistik"; render(); setScreen(statistikScreen()); attachEvents(); }));
+  q("#btnSimpanAmbang") && q("#btnSimpanAmbang").addEventListener("click", submitAmbang);
 }
 
 /* ---- login ---- */
