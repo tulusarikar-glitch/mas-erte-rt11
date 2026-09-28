@@ -65,9 +65,20 @@ h2.title{font-family:'Fraunces',serif; font-weight:600; font-size:19px; margin:2
 .badge.ok{background:#DCEBE0; color:var(--green);}
 .badge.wait{background:#F3E6C9; color:#8A6417;}
 .badge.due{background:#F3DCD8; color:var(--brick);}
+.badge.aid{background:#E1EAF5; color:#28507F; margin:2px 4px 0 0;}
 @media (prefers-color-scheme: dark){
-  .badge.ok{background:#1E3A2A;} .badge.wait{background:#3B3116;} .badge.due{background:#3C2521;}
+  .badge.ok{background:#1E3A2A;} .badge.wait{background:#3B3116;} .badge.due{background:#3C2521;} .badge.aid{background:#1F2F44; color:#9CC0EB;}
 }
+/* pencarian & filter Data Warga */
+.search-wrap{position:relative; margin-bottom:10px;}
+.search-wrap input{width:100%; padding:11px 40px 11px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-family:inherit; font-size:14px;}
+.search-wrap input:focus{outline:2px solid var(--green-light);}
+.search-wrap .x{position:absolute; right:4px; top:50%; transform:translateY(-50%); border:none; background:none; color:var(--sub); font-size:22px; line-height:1; padding:6px 10px; cursor:pointer; display:none;}
+.chips{display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:4px; -webkit-overflow-scrolling:touch;}
+.chip{flex:0 0 auto; border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:99px; padding:6px 12px; font-size:12px; font-family:inherit; font-weight:600; cursor:pointer; white-space:nowrap;}
+.chip.active{background:var(--green); color:#fff; border-color:var(--green);}
+.chk, .field .chk{display:flex; align-items:center; gap:8px; padding:6px 0; margin:0; font-size:13.5px; font-weight:400; color:var(--ink); cursor:pointer;}
+.chk input, .field .chk input{width:auto; margin:0; flex:0 0 auto;}
 .btn{ display:inline-block; background:var(--green); color:#fff; border:none; padding:10px 16px; border-radius:11px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; }
 .btn.outline{background:transparent; color:var(--green); border:1px solid var(--green);}
 .btn.gold{background:var(--gold);}
@@ -134,7 +145,8 @@ const API_KEY = "gampangwae"; // harus SAMA dengan API_KEY di Code.gs
 async function apiGet(action, params) {
   if (action !== "login" && cekKadaluarsaSesi()) return { ok: false, error: "Sesi berakhir. Silakan login ulang." };
   const aktor = (session && session.username) || "";
-  const q = new URLSearchParams(Object.assign({ action, apiKey: API_KEY, aktor }, params || {}));
+  const asWarga = session && session.peran === "warga" && session.nik ? { nik_login: session.nik } : {};
+  const q = new URLSearchParams(Object.assign({ action, apiKey: API_KEY, aktor }, asWarga, params || {}));
   const res = await fetch(API_URL + "?" + q.toString());
   const r = await res.json(); touchSesi(false);
   return sesiDitolakServer(action, r);
@@ -187,7 +199,7 @@ function touchSesi(force) {
 if (session && sesiKadaluarsa(session)) { sesiPesan = "Sesi berakhir karena aplikasi tidak dipakai lebih dari " + sesiHari(session.peran) + " hari. Silakan login ulang."; clearSession(); }
 else if (session && !session._aktif) touchSesi(true); // sesi lama tanpa penanda waktu: mulai dihitung dari sekarang
 function paksaLogout(pesan) {
-  clearSession(); formError = pesan || ""; currentTab = "beranda";
+  clearSession(); resetWargaCari(); formError = pesan || ""; currentTab = "beranda";
   if (typeof render === "function") render();
 }
 function cekKadaluarsaSesi() {
@@ -258,6 +270,8 @@ let cache = {
 let loginMode = "pengurus";
 let formError = "";
 let kkRowSeq = 0;
+let wargaQ = "", wargaFilter = ""; // kata kunci & filter bantuan di tab Warga (bertahan saat buka/tutup detail KK)
+function resetWargaCari() { wargaQ = ""; wargaFilter = ""; }
 
 function render() {
   const el = document.getElementById("phone");
@@ -460,6 +474,79 @@ function kasLedgerBlock(l) {
         </div>`).join("") : `<div class="empty">Belum ada mutasi ${esc(title)}.</div>`}
     </div>`;
 }
+/* ====================== PENCARIAN & BANTUAN (Data Warga) ====================== */
+const BANTUAN_KODE = ["PKH", "BPNT", "BLT", "PBI-JK", "PIP"];
+const BANTUAN_NAMA = { "PKH": "PKH — Program Keluarga Harapan", "BPNT": "BPNT — Bantuan Pangan Non Tunai", "BLT": "BLT — Bantuan Langsung Tunai", "PBI-JK": "PBI-JK — BPJS Kesehatan (PBI)", "PIP": "PIP — Program Indonesia Pintar" };
+const BANTUAN_KELUARGA = ["PKH", "BPNT", "BLT"];
+const WARGA_CHIPS = [["", "Semua"], ["PKH", "PKH"], ["BPNT", "BPNT"], ["BLT", "BLT"], ["PBI-JK", "PBI"], ["PIP", "PIP"], ["TANPA", "Tanpa bantuan"]];
+function bantuanList(v) { return (Array.isArray(v) ? v : String(v || "").split(";")).map(x => String(x).trim()).filter(Boolean); }
+function bantuanBadges(v) { return bantuanList(v).map(x => `<span class="badge aid">${esc(x)}</span>`).join(""); }
+
+// Mengembalikan null kalau KK tidak cocok, atau { kk: bool, orang: [anggota cocok], angka: bool } kalau cocok.
+function wargaCocok(k) {
+  if (wargaFilter && can.editWarga()) {
+    const b = k.bantuan || [];
+    if (wargaFilter === "TANPA" ? b.length : b.indexOf(wargaFilter) === -1) return null;
+  }
+  const q = wargaQ.trim().toLowerCase();
+  if (!q) return { kk: false, orang: [], angka: false };
+  const anggota = k.anggota || [];
+  const digits = q.replace(/\D/g, "");
+  if (/^[\d\s.\-]+$/.test(q) && digits) {
+    if (!can.seeFullNik(k.no_kk)) return null; // NIK/No. KK hanya bisa dicari oleh yang berhak melihatnya
+    const kk = String(k.no_kk).indexOf(digits) > -1;
+    const orang = anggota.filter(a => String(a.nik || "").indexOf(digits) > -1);
+    return kk || orang.length ? { kk, orang, angka: true } : null;
+  }
+  const tok = q.split(/\s+/).filter(Boolean);
+  const orang = anggota.filter(a => { const n = String(a.nama || "").toLowerCase(); return tok.every(t => n.indexOf(t) > -1); });
+  return orang.length ? { kk: false, orang, angka: false } : null;
+}
+function wargaKartu(k, m) {
+  const lihat = can.seeFullNik(k.no_kk);
+  let cocok = "";
+  if (wargaQ.trim() && m && (m.kk || m.orang.length)) {
+    const p = [];
+    if (m.kk) p.push("No. KK");
+    if (m.orang.length) p.push((m.angka ? "NIK: " : "") + m.orang.slice(0, 2).map(a => esc(a.nama) + (a.hub ? " (" + esc(a.hub) + ")" : "")).join(", ") + (m.orang.length > 2 ? " +" + (m.orang.length - 2) + " lainnya" : ""));
+    cocok = `<div class="desc" style="color:var(--green); font-weight:600">Cocok ${p.join(" · ")}</div>`;
+  }
+  const bdg = bantuanBadges(k.bantuan);
+  return `
+    <button class="list-link" data-buka-kk="${esc(k.no_kk)}">
+      <span class="txt"><div class="name">${esc(k.kepala)}</div>
+      <div class="desc">No. KK ${esc(lihat ? k.no_kk : maskNik(k.no_kk))} · Rumah: ${esc(k.nama_rumah || "belum ditautkan")} · ${k.jiwa} jiwa</div>
+      ${cocok}${bdg ? `<div style="margin-top:3px">${bdg}</div>` : ""}</span>
+      <span class="chev">›</span>
+    </button>`;
+}
+function wargaHasil() {
+  const total = cache.kk.length, hasil = [];
+  cache.kk.forEach(k => { const m = wargaCocok(k); if (m) hasil.push(k, m); });
+  const n = hasil.length / 2, aktif = !!(wargaQ.trim() || (wargaFilter && can.editWarga()));
+  let html = "";
+  if (n) { let kartu = ""; for (let i = 0; i < hasil.length; i += 2) kartu += wargaKartu(hasil[i], hasil[i + 1]); html = `<div class="card" style="padding:4px 12px">${kartu}</div>`; }
+  else {
+    const angka = /^[\d\s.\-]+$/.test(wargaQ.trim()) && wargaQ.replace(/\D/g, "");
+    html = `<div class="empty">Tidak ditemukan.${angka && !can.editWarga() ? "<br>Pencarian NIK/No. KK hanya untuk Ketua &amp; Sekretaris. Coba cari dengan nama." : ""}</div>`;
+  }
+  return { html, count: aktif ? n + " dari " + total + " KK ditemukan" : total + " KK terdata" };
+}
+function bindWargaCari() {
+  const inp = document.getElementById("wargaCari");
+  if (!inp) return;
+  const hasil = document.getElementById("wargaHasil"), cnt = document.getElementById("wargaCount"), x = document.getElementById("wargaCariX");
+  const upd = () => {
+    const r = wargaHasil(); hasil.innerHTML = r.html; cnt.textContent = r.count;
+    if (x) x.style.display = wargaQ ? "block" : "none";
+    Array.from(document.querySelectorAll("#wargaChips [data-wfilter]")).forEach(c => c.classList.toggle("active", c.dataset.wfilter === wargaFilter));
+  };
+  inp.addEventListener("input", () => { wargaQ = inp.value; upd(); });
+  if (x) x.addEventListener("click", () => { wargaQ = ""; inp.value = ""; upd(); inp.focus(); });
+  Array.from(document.querySelectorAll("#wargaChips [data-wfilter]")).forEach(c => c.addEventListener("click", () => { wargaFilter = c.dataset.wfilter; upd(); }));
+  hasil.addEventListener("click", e => { const b = e.target.closest("[data-buka-kk]"); if (b) openKK(b.dataset.bukaKk); });
+}
+
 const screens = {
   beranda(){
     return `
@@ -480,19 +567,21 @@ const screens = {
   },
 
   warga(){
-    if (!cache.kk.length) return `<div class="section-tag">DATA KEPENDUDUKAN</div><h2 class="title">Data Warga</h2><div class="empty">Belum ada KK terdata.</div>${can.editWarga() ? '<button class="btn outline block" id="btnTambahKK">+ Tambah KK baru</button><button class="btn block" id="btnImporKK" style="margin-top:8px">📥 Impor KK (Scan PDF/Foto atau CSV)</button>' : ''}`;
+    const tombol = can.editWarga() ? '<button class="btn outline block" id="btnTambahKK">+ Tambah KK baru</button><button class="btn block" id="btnImporKK" style="margin-top:8px">📥 Impor KK (Scan PDF/Foto atau CSV)</button>' : '<div class="empty">Hubungi Sekretaris/Ketua RT untuk menambah data.</div>';
+    if (!cache.kk.length) return `<div class="section-tag">DATA KEPENDUDUKAN</div><h2 class="title">Data Warga</h2><div class="empty">Belum ada KK terdata.</div>${can.editWarga() ? tombol : ''}`;
+    const r = wargaHasil();
+    const chips = can.editWarga() ? `<div class="chips" id="wargaChips">${WARGA_CHIPS.map(c => `<button class="chip ${wargaFilter === c[0] ? "active" : ""}" data-wfilter="${c[0]}">${c[1]}</button>`).join("")}</div>` : "";
     return `
       <div class="section-tag">DATA KEPENDUDUKAN</div>
       <h2 class="title">Data Warga</h2>
-      <div class="card" style="padding:4px 12px">
-        ${cache.kk.map(k=>`
-          <button class="list-link" data-open-kk="${esc(k.no_kk)}">
-            <span class="txt"><div class="name">${esc(k.kepala)}</div>
-            <div class="desc">No. KK ${esc(can.seeFullNik(k.no_kk) ? k.no_kk : maskNik(k.no_kk))} · Rumah: ${esc(k.nama_rumah||'belum ditautkan')} · ${k.jiwa} jiwa</div></span>
-            <span class="chev">›</span>
-          </button>`).join("")}
+      <div class="search-wrap">
+        <input id="wargaCari" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" value="${esc(wargaQ)}" placeholder="🔍 ${can.editWarga() ? "Cari nama, NIK, atau No. KK…" : "Cari nama warga…"}">
+        <button class="x" id="wargaCariX" type="button" aria-label="Hapus pencarian" style="display:${wargaQ ? "block" : "none"}">×</button>
       </div>
-      ${can.editWarga() ? '<button class="btn outline block" id="btnTambahKK">+ Tambah KK baru</button><button class="btn block" id="btnImporKK" style="margin-top:8px">📥 Impor KK (Scan PDF/Foto atau CSV)</button>' : '<div class="empty">Hubungi Sekretaris/Ketua RT untuk menambah data.</div>'}`;
+      ${chips}
+      <div class="mask-note" id="wargaCount" style="margin-bottom:8px">${esc(r.count)}</div>
+      <div id="wargaHasil">${r.html}</div>
+      <div style="margin-top:12px">${tombol}</div>`;
   },
 
   kkDetail(no_kk){
@@ -1029,12 +1118,21 @@ function anggotaForm(no_kk, existing) {
     <div class="field"><label>Status hubungan dalam keluarga <span class="opt">(opsional)</span></label><input id="fHubungan" value="${esc(v.status_hubungan||'')}" placeholder="Kepala Keluarga / Istri / Anak"></div>
     <div class="field"><label>Nama ayah <span class="opt">(opsional)</span></label><input id="fAyah" value="${esc(v.nama_ayah||'')}"></div>
     <div class="field"><label>Nama ibu <span class="opt">(opsional)</span></label><input id="fIbu" value="${esc(v.nama_ibu||'')}"></div>
+    ${(() => {
+      const bl = bantuanList(v.bantuan), lain = (bl.find(x => /^Lainnya:/i.test(x)) || "").replace(/^Lainnya:\s*/i, "");
+      return `<div class="field"><label>Bantuan sosial aktif <span class="opt">(centang yang sedang diterima)</span></label>
+        ${BANTUAN_KODE.map(k => `<label class="chk"><input type="checkbox" class="fBantuan" value="${k}" ${bl.indexOf(k) > -1 ? "checked" : ""}> ${esc(BANTUAN_NAMA[k])}</label>`).join("")}
+        <label class="chk"><input type="checkbox" id="fBantuanLain" ${lain ? "checked" : ""}> Lainnya</label>
+        <input id="fBantuanLainTeks" placeholder="Nama program bantuan lainnya" value="${esc(lain)}">
+        <label class="chk" style="margin-top:8px"><input type="checkbox" id="fBantuanKK"> Terapkan PKH/BPNT/BLT di atas ke semua anggota KK ini</label>
+        <div class="mask-note">PBI-JK, PIP, dan Lainnya tetap per orang. Data bantuan hanya terlihat oleh Ketua &amp; Sekretaris, dan warga untuk KK-nya sendiri.</div></div>`;
+    })()}
     <button class="btn block" id="btnSimpanAnggota" data-existing="${existing?'1':'0'}" data-no-kk="${esc(no_kk)}">Simpan</button>`;
 }
 
 /* ====================== IMPOR WARGA: Scan KK (PDF/foto) & CSV massal ====================== */
 let imp = { mode: "scan", rows: [], raw: "", busy: "", msg: "", err: "" };
-const IMP_FIELDS = ["no_kk","nik","nama","jenis_kelamin","ttl","agama","pendidikan","pekerjaan","status_kawin","status_hubungan","nama_ayah","nama_ibu","blok","no_rumah"];
+const IMP_FIELDS = ["no_kk","nik","nama","jenis_kelamin","ttl","agama","pendidikan","pekerjaan","status_kawin","status_hubungan","nama_ayah","nama_ibu","blok","no_rumah","bantuan"];
 function impBlank(o) { const r = {}; IMP_FIELDS.forEach(f => r[f] = ""); return Object.assign(r, o || {}); }
 function impRowIssues(r) {
   const d = v => String(v || "").replace(/\D/g, "");
@@ -1059,6 +1157,7 @@ function imporScreen() {
       <div class="field"><label>Status hubungan</label><input data-imp-f="status_hubungan" data-i="${i}" value="${esc(r.status_hubungan)}"></div>
       <div class="field"><label>Jenis kelamin</label><select data-imp-f="jenis_kelamin" data-i="${i}"><option value="">—</option><option ${r.jenis_kelamin === "Laki-laki" ? "selected" : ""}>Laki-laki</option><option ${r.jenis_kelamin === "Perempuan" ? "selected" : ""}>Perempuan</option></select></div>
       <div class="field"><label>Tempat/Tgl lahir</label><input data-imp-f="ttl" data-i="${i}" value="${esc(r.ttl)}"></div>
+      <div class="field"><label>Bantuan aktif <span class="opt">(opsional, pisahkan dengan ;)</span></label><input data-imp-f="bantuan" data-i="${i}" value="${esc(r.bantuan)}" placeholder="PKH;BPNT;PBI-JK"></div>
     </div>`;
   }).join("");
   const bad = imp.rows.filter(r => impRowIssues(r).length).length;
@@ -1073,7 +1172,7 @@ function imporScreen() {
     ${imp.mode === "scan" ? `
       <p style="font-size:12.5px; color:var(--sub); margin:0 0 10px">Pilih foto atau PDF hasil scan KK. Sistem membaca teksnya lalu menampilkan hasilnya untuk Anda <b>periksa dan perbaiki</b> sebelum disimpan. Foto sebaiknya tegak, terang, dan tidak buram.</p>
       <div class="field"><input type="file" id="impFileKK" accept="image/*,application/pdf"></div>` : `
-      <p style="font-size:12.5px; color:var(--sub); margin:0 0 10px">Kolom wajib: <b>no_kk, nik, nama</b>. Kolom lain opsional. Di Excel, format kolom NIK &amp; No. KK sebagai <b>Text</b> supaya angkanya tidak berubah jadi 3,3E+15.</p>
+      <p style="font-size:12.5px; color:var(--sub); margin:0 0 10px">Kolom wajib: <b>no_kk, nik, nama</b>. Kolom lain opsional (termasuk <b>bantuan</b>, mis. <code>PKH;BPNT</code>). Di Excel, format kolom NIK &amp; No. KK sebagai <b>Text</b> supaya angkanya tidak berubah jadi 3,3E+15.</p>
       <button class="btn outline block" id="impTemplate" style="margin-bottom:10px">⬇ Unduh template CSV</button>
       <div class="field"><input type="file" id="impFileCSV" accept=".csv,.txt,text/csv"></div>`}
     ${imp.raw ? `<details style="margin-bottom:12px"><summary style="font-size:12.5px; color:var(--sub)">Lihat teks mentah hasil baca</summary><pre style="white-space:pre-wrap; font-size:11px; max-height:200px; overflow:auto">${esc(imp.raw)}</pre></details>` : ""}
@@ -1193,7 +1292,8 @@ const CSV_ALIAS = {
   jeniskelamin: "jenis_kelamin", jk: "jenis_kelamin", gender: "jenis_kelamin", ttl: "ttl", tempatlahir: "ttl", tanggallahir: "ttl", tempattanggallahir: "ttl",
   agama: "agama", pendidikan: "pendidikan", pekerjaan: "pekerjaan", statuskawin: "status_kawin", statusperkawinan: "status_kawin",
   statushubungan: "status_hubungan", hubungan: "status_hubungan", statushubungandalamkeluarga: "status_hubungan",
-  namaayah: "nama_ayah", ayah: "nama_ayah", namaibu: "nama_ibu", ibu: "nama_ibu", blok: "blok", norumah: "no_rumah", nomorrumah: "no_rumah"
+  namaayah: "nama_ayah", ayah: "nama_ayah", namaibu: "nama_ibu", ibu: "nama_ibu", blok: "blok", norumah: "no_rumah", nomorrumah: "no_rumah",
+  bantuan: "bantuan", bantuansosial: "bantuan", programbantuan: "bantuan"
 };
 async function impCsv(file) {
   imp.err = ""; imp.msg = ""; imp.busy = "Membaca CSV…"; imporRender();
@@ -1210,9 +1310,9 @@ async function impCsv(file) {
   imp.busy = ""; imporRender();
 }
 function impDownloadTemplate() {
-  const csv = "\uFEFFno_kk,nik,nama,jenis_kelamin,ttl,agama,pendidikan,pekerjaan,status_kawin,status_hubungan,nama_ayah,nama_ibu,blok,no_rumah\r\n" +
-    "3314000000000001,3314000000000002,BUDI SANTOSO,Laki-laki,Sragen 17-08-1985,Islam,SLTA,Petani,Kawin,Kepala Keluarga,,,,\r\n" +
-    "3314000000000001,3314000000000003,SITI AMINAH,Perempuan,Sragen 02-03-1988,Islam,SLTA,Mengurus Rumah Tangga,Kawin,Istri,,,,\r\n";
+  const csv = "\uFEFFno_kk,nik,nama,jenis_kelamin,ttl,agama,pendidikan,pekerjaan,status_kawin,status_hubungan,nama_ayah,nama_ibu,blok,no_rumah,bantuan\r\n" +
+    "3314000000000001,3314000000000002,BUDI SANTOSO,Laki-laki,Sragen 17-08-1985,Islam,SLTA,Petani,Kawin,Kepala Keluarga,,,,,PKH;BPNT\r\n" +
+    "3314000000000001,3314000000000003,SITI AMINAH,Perempuan,Sragen 02-03-1988,Islam,SLTA,Mengurus Rumah Tangga,Kawin,Istri,,,,,PKH;BPNT;PBI-JK\r\n";
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "template-impor-warga.csv"; a.click();
 }
 
@@ -1504,13 +1604,14 @@ function attachEvents() {
   q("#btnLoginPengurus") && q("#btnLoginPengurus").addEventListener("click", doLoginPengurus);
   q("#btnLoginWarga") && q("#btnLoginWarga").addEventListener("click", doLoginWarga);
   qa("[data-mode]").forEach(b => b.addEventListener("click", () => { loginMode = b.dataset.mode; formError = ""; render(); }));
-  q("#btnLogout") && q("#btnLogout").addEventListener("click", () => { clearSession(); currentTab = "beranda"; render(); });
+  q("#btnLogout") && q("#btnLogout").addEventListener("click", () => { clearSession(); resetWargaCari(); currentTab = "beranda"; render(); });
 
   qa("[data-tab]").forEach(b => b.addEventListener("click", () => goTab(b.dataset.tab)));
   qa("[data-open-sub]").forEach(b => b.addEventListener("click", () => { currentTab = b.dataset.openSub; render(); loadAndShow(b.dataset.openSub); }));
   qa("[data-back-tab]").forEach(b => b.addEventListener("click", () => goTab(b.dataset.backTab)));
 
   qa("[data-open-kk]").forEach(b => b.addEventListener("click", () => openKK(b.dataset.openKk)));
+  bindWargaCari();
   qa("[data-back-kk]").forEach(b => b.addEventListener("click", () => openKK(b.dataset.backKk)));
   q("#btnTambahKK") && q("#btnTambahKK").addEventListener("click", () => { formError=""; setScreen(kkForm()); attachEvents(); });
   q("#btnSimpanKK") && q("#btnSimpanKK").addEventListener("click", submitKK);
@@ -1665,6 +1766,7 @@ async function openKK(no_kk) {
     <div class="item">
       <div class="row"><span class="item-title">${esc(a.nama)}</span><span class="item-sub">${esc(a.status_hubungan||'-')}</span></div>
       <div class="item-sub">NIK ${esc(can.seeFullNik(no_kk) ? a.nik : maskNik(a.nik))} ${a.jenis_kelamin?('· '+esc(a.jenis_kelamin)):''} ${a.pekerjaan?('· '+esc(a.pekerjaan)):''}</div>
+      ${bantuanList(a.bantuan).length ? `<div style="margin-top:4px"><span class="item-sub">Bantuan aktif:</span> ${bantuanBadges(a.bantuan)}</div>` : ''}
       ${can.editWarga() ? `<div class="btn-row"><button class="btn outline sm" data-edit-anggota="${esc(a.nik)}">Ubah</button><button class="btn brick sm" data-del-anggota="${esc(a.nik)}">Hapus</button></div>` : ""}
     </div>`).join("") : '<div class="empty">Belum ada anggota di KK ini.</div>';
   Array.from(wrap.querySelectorAll("[data-edit-anggota]")).forEach(b => b.addEventListener("click", () => {
@@ -1714,6 +1816,12 @@ async function submitAnggota() {
     status_hubungan: document.getElementById("fHubungan").value.trim(), nama_ayah: document.getElementById("fAyah").value.trim(),
     nama_ibu: document.getElementById("fIbu").value.trim()
   };
+  const bs = Array.from(document.querySelectorAll(".fBantuan:checked")).map(c => c.value);
+  const lainOn = document.getElementById("fBantuanLain").checked, lainTeks = document.getElementById("fBantuanLainTeks").value.replace(/[;,]/g, " ").replace(/\s+/g, " ").trim();
+  if (lainOn) bs.push("Lainnya: " + (lainTeks || "-"));
+  payload.bantuan = bs.join(";");
+  payload.terapkan_kk = document.getElementById("fBantuanKK").checked;
+  if (lainOn && !lainTeks) { formError = "Isi nama program bantuan lainnya, atau hilangkan centangnya."; setScreen(anggotaForm(no_kk, existing ? payload : null)); attachEvents(); return; }
   if (!payload.nama || !payload.nik) { formError = "Nama dan NIK wajib diisi."; setScreen(anggotaForm(no_kk, existing ? payload : null)); attachEvents(); return; }
   btn.disabled = true; btn.textContent = "Menyimpan…";
   const r = await apiPost(existing ? "updateAnggota" : "addAnggota", payload);
