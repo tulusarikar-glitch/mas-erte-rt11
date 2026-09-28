@@ -132,19 +132,23 @@ const API_KEY = "gampangwae"; // harus SAMA dengan API_KEY di Code.gs
 
 /* ====================== HELPER API ====================== */
 async function apiGet(action, params) {
+  if (action !== "login" && cekKadaluarsaSesi()) return { ok: false, error: "Sesi berakhir. Silakan login ulang." };
   const aktor = (session && session.username) || "";
   const q = new URLSearchParams(Object.assign({ action, apiKey: API_KEY, aktor }, params || {}));
   const res = await fetch(API_URL + "?" + q.toString());
-  return res.json();
+  const r = await res.json(); touchSesi(false);
+  return sesiDitolakServer(action, r);
 }
 async function apiPost(action, body) {
+  if (cekKadaluarsaSesi()) return { ok: false, error: "Sesi berakhir. Silakan login ulang." };
   const aktor = (session && session.username) || "";
   const res = await fetch(API_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify(Object.assign({ action, apiKey: API_KEY, aktor }, body || {}))
   });
-  return res.json();
+  const r = await res.json(); touchSesi(false);
+  return sesiDitolakServer(action, r);
 }
 const rupiah = n => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
 function fmtTanggal(v) {
@@ -164,10 +168,39 @@ function maskNik(nik) {
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
 /* ====================== SESI ====================== */
-let session = null;
-try { const raw = localStorage.getItem("masrte_session"); if (raw) session = JSON.parse(raw); } catch (e) {}
-function saveSession(s) { session = s; try { localStorage.setItem("masrte_session", JSON.stringify(s)); } catch (e) {} }
-function clearSession() { session = null; try { localStorage.removeItem("masrte_session"); } catch (e) {} }
+// Batas tidak dipakai: petugas & warga 7 hari, peran lain (Ketua, Bendahara, Sekretaris, Admin, dst.) 3 hari.
+// Masa berlaku diperpanjang otomatis setiap aplikasi dipakai. Ubah angka di bawah untuk menyesuaikan.
+const SESI_HARI_LONGGAR = 7, SESI_HARI_KETAT = 3, SESI_PERAN_LONGGAR = ["kt_petugas", "warga"];
+const SESI_KEY = "masrte_session";
+let session = null, sesiPesan = "", _sesiTouch = 0;
+try { const raw = localStorage.getItem(SESI_KEY); if (raw) session = JSON.parse(raw); } catch (e) {}
+function sesiHari(peran) { return SESI_PERAN_LONGGAR.indexOf(peran) > -1 ? SESI_HARI_LONGGAR : SESI_HARI_KETAT; }
+function sesiKadaluarsa(s) { const t = s && Number(s._aktif); return !!t && (Date.now() - t) > sesiHari(s.peran) * 86400000; }
+function saveSession(s) { session = s; session._aktif = Date.now(); _sesiTouch = session._aktif; try { localStorage.setItem(SESI_KEY, JSON.stringify(session)); } catch (e) {} }
+function clearSession() { session = null; try { localStorage.removeItem(SESI_KEY); } catch (e) {} }
+function touchSesi(force) {
+  if (!session) return;
+  const n = Date.now(); if (!force && n - _sesiTouch < 60000) return;
+  _sesiTouch = n; session._aktif = n;
+  try { localStorage.setItem(SESI_KEY, JSON.stringify(session)); } catch (e) {}
+}
+if (session && sesiKadaluarsa(session)) { sesiPesan = "Sesi berakhir karena aplikasi tidak dipakai lebih dari " + sesiHari(session.peran) + " hari. Silakan login ulang."; clearSession(); }
+else if (session && !session._aktif) touchSesi(true); // sesi lama tanpa penanda waktu: mulai dihitung dari sekarang
+function paksaLogout(pesan) {
+  clearSession(); formError = pesan || ""; currentTab = "beranda";
+  if (typeof render === "function") render();
+}
+function cekKadaluarsaSesi() {
+  if (session && sesiKadaluarsa(session)) { paksaLogout("Sesi berakhir karena aplikasi tidak dipakai lebih dari " + sesiHari(session.peran) + " hari. Silakan login ulang."); return true; }
+  return false;
+}
+// Server menolak karena akun tidak dikenal/dinonaktifkan -> langsung kembali ke halaman login.
+function sesiDitolakServer(action, r) {
+  if (r && r.ok === false && session && action !== "login" && /Sesi tidak dikenali|sudah nonaktif/i.test(String(r.error || ""))) paksaLogout(r.error);
+  return r;
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !cekKadaluarsaSesi()) touchSesi(true); });
+document.addEventListener("click", () => touchSesi(false), true);
 
 const can = {
   editWarga: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
@@ -2351,9 +2384,23 @@ async function delInventaris(id) {
 }
 
 /* ====================== MULAI ====================== */
+// Perbarui nama & peran dari server (mis. peran diubah Admin) tanpa perlu login ulang.
+async function sinkronSesi() {
+  if (!session || !session.username) return;
+  try {
+    const r = await apiGet("cekSesi");
+    if (!(r && r.ok && r.user) || !session) return;
+    if (r.user.peran !== session.peran || r.user.nama !== session.nama) {
+      session.peran = r.user.peran; session.nama = r.user.nama; touchSesi(true);
+      currentTab = session.peran === "admin" ? "akun" : "beranda";
+      render(); loadAndShow(currentTab);
+    }
+  } catch (e) {}
+}
+if (sesiPesan) formError = sesiPesan;
 if (session && session.peran === "admin") currentTab = "akun";
 render();
-if (session) loadAndShow(currentTab);
+if (session) { loadAndShow(currentTab); sinkronSesi(); }
 </script>
 </body>
 </html>
