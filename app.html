@@ -109,6 +109,17 @@ nav button .ic{font-size:19px;}
 .tabs2 button{flex:1; padding:8px; border-radius:9px; border:none; background:none; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--sub); cursor:pointer;}
 .tabs2 button.active{background:var(--surface); color:var(--green); box-shadow:0 1px 3px rgba(0,0,0,.08);}
 .mask-note{font-size:11px; color:var(--sub); margin-top:2px;}
+
+.cal{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-top:8px;}
+.cal .h{font-size:10px; text-align:center; color:var(--sub); font-weight:600;}
+.cal .d{aspect-ratio:1; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:11px; background:var(--bg); color:var(--sub); border:1px solid var(--line);}
+.cal .d b{font-size:12px; color:var(--ink);}
+.cal .d.lunas{background:#DCEBE0; color:var(--green); border-color:transparent;}
+.cal .d.kurang{background:#F3E6C9; color:#8A6417; border-color:transparent;}
+.cal .d.kosong{background:#F3DCD8; color:var(--brick); border-color:transparent;}
+.cal .d.empty0{visibility:hidden;}
+.month-nav{display:flex; gap:8px; align-items:center; margin:12px 0;}
+.month-nav input{flex:1; padding:9px 10px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-family:inherit;}
 </style>
 </head>
 <body>
@@ -180,6 +191,8 @@ const can = {
   inputJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_petugas"),
   postJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_bendahara"),
   manageInventaris: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
+  viewRekapJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_bendahara"),
+  bayarJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_bendahara"),
   manageRumah: () => session && (session.peran === "ketua" || session.peran === "sekretaris" || session.peran === "kt_ketua" || session.peran === "kt_bendahara"),
 };
 // alias supaya kode lama yang memanggil can.editKas() tetap berfungsi (Kas RT)
@@ -268,7 +281,7 @@ function appShell() {
       <button data-tab="warga" class="${currentTab==='warga'?'active':''}"><span class="ic">👪</span>Warga</button>
       <button data-tab="kas" class="${currentTab==='kas'?'active':''}"><span class="ic">💰</span>Kas</button>
       <button data-tab="info" class="${currentTab==='info'?'active':''}"><span class="ic">📣</span>Info</button>
-      <button data-tab="lainnya" class="${['lainnya','surat','pengaduan','kt','kontak','jimpitan','akun','iuranrt','iuranrtDetail','tunggakan','inventaris','rumah'].includes(currentTab)?'active':''}"><span class="ic">☰</span>Lainnya</button>
+      <button data-tab="lainnya" class="${['lainnya','surat','pengaduan','kt','kontak','jimpitan','akun','iuranrt','iuranrtDetail','tunggakan','inventaris','rumah','rekapjimpitan','rekapjimpitanDetail'].includes(currentTab)?'active':''}"><span class="ic">☰</span>Lainnya</button>
     </nav>`;
 }
 
@@ -295,6 +308,8 @@ async function loadAndShow(tab) {
     else if (tab === "kontak") { await refreshKontak(); setScreen(screens.kontak()); }
     else if (tab === "iuranrt") { await refreshPertemuanRT(); setScreen(screens.iuranrt()); }
     else if (tab === "jimpitan") { await refreshJimpitanLog(); setScreen(screens.jimpitan()); }
+    else if (tab === "rekapjimpitan") { await refreshRekapJimpitan(); setScreen(screens.rekapjimpitan()); }
+    else if (tab === "rekapjimpitanDetail") { await refreshRekapDetail(); setScreen(screens.rekapjimpitanDetail()); }
     else if (tab === "tunggakan") { await refreshTunggakanRT(); setScreen(screens.tunggakan()); }
     else if (tab === "inventaris") { await refreshInventaris(); setScreen(screens.inventaris()); }
     else if (tab === "rumah") { await refreshWarga(); setScreen(screens.rumah()); }
@@ -475,6 +490,7 @@ const screens = {
           <div class="item">
             <div class="row"><span class="item-title">${esc(r.nama)}</span><span class="item-sub">${r.jumlah_kk} KK</span></div>
             ${r.catatan ? `<div class="item-sub">${esc(r.catatan)}</div>` : ''}
+            <div class="item-sub">Jimpitan: ${r.status_jimpitan==='bebas' ? '<b>dibebaskan</b>' : 'aktif'}${r.mulai_jimpitan ? ' · mulai '+fmtTanggal(r.mulai_jimpitan) : ''}</div>
             ${manage ? `<div class="btn-row"><button class="btn outline sm" data-edit-rumah="${esc(r.id)}">Ubah</button><button class="btn brick sm" data-del-rumah="${esc(r.id)}">Hapus</button></div>` : ''}
           </div>`).join("") : '<div class="empty">Belum ada data rumah. Tambahkan lewat tombol di atas.</div>'}
       </div>`;
@@ -671,6 +687,7 @@ const screens = {
       <h2 class="title">Jimpitan</h2>
       <div class="mask-note" style="margin-top:-4px">Satuan jimpitan adalah rumah (nama/patokan bebas, kelola di menu Data Rumah), bukan KK — Rp500/hari. Log tercatat dulu di sini, baru resmi masuk saldo Kas Jimpitan setelah diposting.</div>
       ${canInput ? '<button class="btn gold block" id="btnCatatJimpitan" style="margin-top:12px">+ Catat setoran rumah</button>' : ''}
+      ${can.viewRekapJimpitan() ? '<button class="btn outline block" id="btnRekapJimpitan" style="margin-top:8px">📊 Rekap per Rumah &amp; Tunggakan</button>' : ''}
       <div class="card" style="margin-top:12px">
         <div class="row"><span class="label">Total log belum diposting</span></div>
         <div class="value-lg">${rupiah(cache.jimpitanTotalBelum)}</div>
@@ -697,6 +714,92 @@ const screens = {
             <div class="item-sub">${fmtTanggal(l.tanggal)} · dicatat oleh ${esc(l.dicatat_oleh||'-')}</div>
           </div>`).join("")}
       </div>` : ""}`;
+  },
+
+  rekapjimpitan(){
+    const d = rekapJ.data;
+    if (!d) return '<div class="empty">Belum ada data.</div>';
+    const s = d.ringkasan, canPay = can.bayarJimpitan();
+    let list = d.rumah;
+    if (rekapJ.onlyTunggak) list = list.filter(o => o.total_tunggakan > 0);
+    return `
+      <button class="back" data-back-tab="jimpitan">‹ Kembali</button>
+      <h2 class="title">Rekap Jimpitan per Rumah</h2>
+      <div class="mask-note" style="margin-top:-4px">Wajib Rp${(d.harian).toLocaleString("id-ID")}/hari. Dihitung sampai ${fmtTanggal(d.dihitung_sampai)} (hari ini belum dihitung). Tunggakan bulan lalu ikut muncul di sini dan bisa dilunasi.</div>
+      <div class="month-nav">
+        <button class="btn outline sm" data-rekap-geser="-1">‹</button>
+        <input type="month" id="rekapBulan" value="${esc(rekapJ.bulan)}">
+        <button class="btn outline sm" data-rekap-geser="1">›</button>
+      </div>
+      <div class="card">
+        <div class="row"><span class="label">Terkumpul ${esc(bulanLabel(rekapJ.bulan))}</span><span style="font-weight:700">${rupiah(s.terkumpul)}</span></div>
+        <div class="row"><span class="label">Target bulan ini</span><span style="font-weight:700">${rupiah(s.target)}</span></div>
+        <div class="label" style="margin-top:8px">Total tunggakan (${s.rumah_menunggak} rumah)</div>
+        <div class="value-lg" style="color:var(--brick)">${rupiah(s.tunggakan)}</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn outline block" id="btnRekapCsv">⬇ Unduh CSV</button>
+        <button class="btn gold block" id="btnRekapWa">Bagikan WhatsApp</button>
+      </div>
+      ${canPay ? `<div class="card" style="margin-top:12px">
+        <div class="field" style="margin-bottom:6px"><label>Tunggakan dihitung mulai tanggal <span class="opt">(global, bisa dilonggarkan per rumah di Data Rumah)</span></label>
+        <input id="rekapMulai" type="date" value="${esc(d.mulai_global)}"></div>
+        <button class="btn outline sm" id="btnSimpanMulai">Simpan tanggal mulai</button></div>` : ''}
+      <label class="row" style="margin:12px 0 4px; cursor:pointer; justify-content:flex-start; gap:8px"><input type="checkbox" id="rekapOnlyTunggak" ${rekapJ.onlyTunggak?'checked':''}> <span class="item-sub">Hanya yang menunggak</span></label>
+      <div class="card">
+        ${list.length ? list.map(o => `
+          <div class="item">
+            <div class="row"><span class="item-title">${esc(o.nama)}</span>
+              ${o.status_jimpitan==='bebas' ? '<span class="badge wait">Dibebaskan</span>' : (o.total_tunggakan>0 ? `<span style="font-weight:700; color:var(--brick)">${rupiah(o.total_tunggakan)}</span>` : '<span class="badge ok">Lunas</span>')}</div>
+            <div class="item-sub">Setor ${o.hari_setor} hari · wajib ${o.hari_wajib} hari · terkumpul ${rupiah(o.setor)}</div>
+            ${o.kurang_bulan>0 ? `<div class="item-sub" style="color:var(--brick)">Kurang bulan ini: ${rupiah(o.kurang_bulan)}</div>` : ''}
+            ${o.tunggakan_lalu>0 ? `<div class="item-sub" style="color:var(--brick)">+ tunggakan bulan sebelumnya ${o.hari_tunggak_lalu} hari: ${rupiah(o.tunggakan_lalu)}</div>` : ''}
+            <div class="btn-row">
+              <button class="btn outline sm" data-rekap-detail="${esc(o.id)}">Detail</button>
+              ${canPay && o.total_tunggakan>0 ? `<button class="btn gold sm" data-lunasi-jimpitan="${esc(o.id)}">Lunasi</button>` : ''}
+              ${o.total_tunggakan>0 ? `<button class="btn outline sm" data-wa-rumah="${esc(o.id)}">WA</button>` : ''}
+            </div>
+          </div>`).join("") : '<div class="empty">Tidak ada rumah untuk ditampilkan.</div>'}
+      </div>`;
+  },
+  rekapjimpitanDetail(){
+    const dt = rekapJ.detail;
+    if (!dt) return '<div class="empty">Data tidak ditemukan.</div>';
+    const o = dt.ringkasan, canPay = can.bayarJimpitan();
+    const [y, m] = rekapJ.bulan.split("-").map(Number);
+    const off = new Date(Date.UTC(y, m-1, 1)).getUTCDay();
+    const heads = ["Min","Sen","Sel","Rab","Kam","Jum","Sab"].map(x=>`<div class="h">${x}</div>`).join("");
+    const blanks = Array.from({length:off}, ()=>'<div class="d empty0"></div>').join("");
+    const cells = dt.hari.map(h => {
+      const cls = h.status==='lunas'?'lunas':h.status==='kurang'?'kurang':h.status==='kosong'?'kosong':'';
+      const mark = h.status==='lunas'?'✓':h.status==='kurang'?'~':h.status==='kosong'?'✗':'·';
+      return `<div class="d ${cls}"><b>${Number(h.tanggal.slice(8))}</b>${mark}</div>`;
+    }).join("");
+    return `
+      <button class="back" data-back-tab="rekapjimpitan">‹ Kembali</button>
+      <h2 class="title">${esc(o.nama)}</h2>
+      <div class="mask-note" style="margin-top:-4px">${esc(bulanLabel(rekapJ.bulan))}${o.status_jimpitan==='bebas'?' · rumah dibebaskan':''} · mulai dihitung ${fmtTanggal(o.mulai_efektif)}</div>
+      <div class="card" style="margin-top:12px">
+        <div class="row"><span class="label">Hari setor / wajib</span><span style="font-weight:700">${o.hari_setor} / ${o.hari_wajib}</span></div>
+        <div class="row"><span class="label">Terkumpul</span><span style="font-weight:700">${rupiah(o.setor)}</span></div>
+        <div class="row"><span class="label">Kurang bulan ini</span><span style="font-weight:700">${rupiah(o.kurang_bulan)}</span></div>
+        <div class="row"><span class="label">Tunggakan sebelumnya</span><span style="font-weight:700">${rupiah(o.tunggakan_lalu)}</span></div>
+        <div class="label" style="margin-top:8px">Total tunggakan (${o.hari_tunggak} hari)</div>
+        <div class="value-lg" style="color:${o.total_tunggakan>0?'var(--brick)':'var(--green)'}">${rupiah(o.total_tunggakan)}</div>
+      </div>
+      <div class="btn-row">
+        ${canPay && o.total_tunggakan>0 ? `<button class="btn gold block" data-lunasi-jimpitan="${esc(o.id)}">Lunasi</button>` : ''}
+        ${o.total_tunggakan>0 ? `<button class="btn outline block" data-wa-rumah="${esc(o.id)}">Ingatkan via WA</button>` : ''}
+        <button class="btn outline block" id="btnDetailCsv">⬇ CSV harian</button>
+      </div>
+      <h2 class="title" style="margin-top:18px; font-size:15px">Kalender harian</h2>
+      <div class="card"><div class="cal">${heads}${blanks}${cells}</div>
+        <div class="item-sub" style="margin-top:8px">✓ lunas · ~ kurang · ✗ kosong · · belum/di luar masa wajib</div></div>
+      <h2 class="title" style="margin-top:18px; font-size:15px">Riwayat pelunasan</h2>
+      <div class="card">
+        ${dt.pelunasan.length ? dt.pelunasan.map(p=>`<div class="item"><div class="row"><span class="item-title">Hari ${fmtTanggal(p.tanggal)}</span><span style="font-weight:700">${rupiah(p.jumlah)}</span></div>
+          <div class="item-sub">dibayar ${fmtTanggal(p.tanggal_bayar)} · dicatat ${esc(p.dicatat_oleh||'-')}</div></div>`).join("") : '<div class="empty">Belum ada pelunasan pada bulan ini.</div>'}
+      </div>`;
   },
 
   iuranrt(){
@@ -1109,6 +1212,9 @@ function rumahForm(existing) {
     ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
     <div class="field"><label>Nama/patokan rumah <span style="color:var(--brick)">*wajib</span></label><input id="fNamaRumah" value="${esc(v.nama||'')}" placeholder="Rumah Bu Sri, sebelah masjid"></div>
     <div class="field"><label>Catatan <span class="opt">(opsional)</span></label><input id="fCatatanRumah" value="${esc(v.catatan||'')}"></div>
+    <div class="field"><label>Status jimpitan</label>
+      <select id="fStatusJimpitan"><option value="aktif" ${v.status_jimpitan!=='bebas'?'selected':''}>Aktif (wajib Rp500/hari)</option><option value="bebas" ${v.status_jimpitan==='bebas'?'selected':''}>Bebas / kosong (tidak dihitung menunggak)</option></select></div>
+    <div class="field"><label>Mulai jimpitan <span class="opt">(opsional — kosong = ikut tanggal mulai global)</span></label><input id="fMulaiJimpitan" type="date" value="${esc(v.mulai_jimpitan||'')}"></div>
     <div class="field" style="margin-bottom:6px">
       <label>KK yang tinggal di rumah ini <span class="opt">(opsional — cari lalu centang)</span></label>
       <input id="fCariKK" placeholder="🔍 Cari nama kepala keluarga…" ${cache.kk.length?'':'disabled'}>
@@ -1249,7 +1355,7 @@ function pertemuanForm() {
 
 /* ====================== FORM: Catat Jimpitan ====================== */
 function jimpitanForm() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = wibToday();
   return `
     <button class="back" data-back-tab="jimpitan">‹ Batal</button>
     <h2 class="title">Catat Setoran Jimpitan</h2>
@@ -1394,6 +1500,8 @@ function attachEvents() {
   q("#btnCatatJimpitan") && q("#btnCatatJimpitan").addEventListener("click", () => { formError=""; setScreen(jimpitanForm()); attachEvents(); });
   bindRumahSelect();
   q("#btnSimpanJimpitan") && q("#btnSimpanJimpitan").addEventListener("click", submitJimpitan);
+  q("#btnRekapJimpitan") && q("#btnRekapJimpitan").addEventListener("click", () => goTab("rekapjimpitan"));
+  bindRekapJimpitan();
   qa("[data-del-jimpitan]").forEach(b => b.addEventListener("click", () => delJimpitan(b.dataset.delJimpitan)));
   q("#btnPostingJimpitan") && q("#btnPostingJimpitan").addEventListener("click", postingJimpitan);
 
@@ -1524,7 +1632,7 @@ async function delKK(no_kk) {
 async function submitRumah() {
   const btn = document.getElementById("btnSimpanRumah");
   const id = btn.dataset.id;
-  const payload = { nama: document.getElementById("fNamaRumah").value.trim(), catatan: document.getElementById("fCatatanRumah").value.trim() };
+  const payload = { nama: document.getElementById("fNamaRumah").value.trim(), catatan: document.getElementById("fCatatanRumah").value.trim(), status_jimpitan: document.getElementById("fStatusJimpitan").value, mulai_jimpitan: document.getElementById("fMulaiJimpitan").value };
   const checkedKK = Array.from(document.querySelectorAll(".rumah-kk-check:checked")).map(c => c.value);
   if (!payload.nama) { formError = "Nama rumah wajib diisi."; setScreen(rumahForm(id ? { id, ...payload } : null)); attachEvents(); return; }
   if (id) payload.id = id;
@@ -1883,6 +1991,96 @@ async function bayarTunggakan(no_kk) {
   if (currentTab === "iuranrtDetail" && currentPertemuanId) await reloadPertemuanDetail();
   else { await refreshTunggakanRT(); setScreen(screens.tunggakan()); attachEvents(); }
   alert(r.message);
+}
+
+/* ---- rekap & tunggakan jimpitan ---- */
+function wibToday() { return new Date(Date.now() + 7*3600*1000).toISOString().slice(0,10); }
+function bulanLabel(b) {
+  const [y, m] = String(b).split("-").map(Number);
+  return ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"][m-1] + " " + y;
+}
+let rekapJ = { bulan: wibToday().slice(0,7), data: null, detail: null, detailId: "", onlyTunggak: false };
+async function refreshRekapJimpitan() {
+  const r = await apiGet("getRekapJimpitan", { bulan: rekapJ.bulan });
+  if (!r.ok) throw new Error(r.error);
+  rekapJ.data = r;
+}
+async function refreshRekapDetail() {
+  const r = await apiGet("getDetailJimpitanRumah", { id_rumah: rekapJ.detailId, bulan: rekapJ.bulan });
+  if (!r.ok) throw new Error(r.error);
+  rekapJ.detail = r;
+}
+function rekapRow(id) {
+  if (rekapJ.detail && rekapJ.detail.ringkasan.id === id) return rekapJ.detail.ringkasan;
+  return rekapJ.data && rekapJ.data.rumah.find(o => o.id === id);
+}
+function csvCell(v) { v = String(v == null ? "" : v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function downloadCSV(name, rows) {
+  const csv = "\uFEFF" + rows.map(r => r.map(csvCell).join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+function shareWa(text) { window.open(waLink(text), "_blank"); }
+function csvRekapBulan() {
+  const d = rekapJ.data;
+  const rows = [["rumah","status","hari_wajib","hari_setor","hari_lunas","total_setor","target_bulan","kurang_bulan_ini","tunggakan_bulan_sebelumnya","total_tunggakan"]];
+  d.rumah.forEach(o => rows.push([o.nama, o.status_jimpitan, o.hari_wajib, o.hari_setor, o.hari_lunas, o.setor, o.target, o.kurang_bulan, o.tunggakan_lalu, o.total_tunggakan]));
+  downloadCSV("rekap-jimpitan-" + rekapJ.bulan + ".csv", rows);
+}
+function waRekapBulan() {
+  const d = rekapJ.data, s = d.ringkasan;
+  const men = d.rumah.filter(o => o.total_tunggakan > 0);
+  let t = `*Rekap Jimpitan ${bulanLabel(rekapJ.bulan)}*\nRT 11 Dukuh Tulusari\n(dihitung s/d ${fmtTanggal(d.dihitung_sampai)})\n\nTerkumpul: ${rupiah(s.terkumpul)}\nTotal tunggakan: ${rupiah(s.tunggakan)} (${s.rumah_menunggak} rumah)\n`;
+  if (men.length) { t += "\nRumah yang menunggak:\n"; men.forEach((o, i) => { t += `${i+1}. ${o.nama} — ${rupiah(o.total_tunggakan)} (${o.hari_tunggak} hari)\n`; }); }
+  else t += "\nSemua rumah lunas. Terima kasih 🙏";
+  shareWa(t);
+}
+function waRumah(id) {
+  const o = rekapRow(id); if (!o) return;
+  shareWa(`Assalamualaikum, pengingat jimpitan RT 11 Dukuh Tulusari.\nRumah: ${o.nama}\nTunggakan s/d ${bulanLabel(rekapJ.bulan)}: ${rupiah(o.total_tunggakan)} (${o.hari_tunggak} hari x Rp500).\nMohon dilunasi lewat petugas/Bendahara Karang Taruna. Terima kasih 🙏`);
+}
+function csvDetailRumah() {
+  const dt = rekapJ.detail, o = dt.ringkasan;
+  const rows = [["rumah","tanggal","setor","status"]];
+  dt.hari.forEach(h => rows.push([o.nama, h.tanggal, h.paid, h.status]));
+  downloadCSV("jimpitan-" + o.nama.replace(/[^\w]+/g, "-") + "-" + rekapJ.bulan + ".csv", rows);
+}
+async function lunasiJimpitan(id) {
+  const o = rekapRow(id); if (!o) return;
+  const v = prompt(`${o.nama} menunggak ${o.hari_tunggak} hari (${rupiah(o.total_tunggakan)}) s/d ${bulanLabel(rekapJ.bulan)}.\nDilunasi mulai hari terlama. Berapa hari yang dilunasi? (1–${o.hari_tunggak})`, String(o.hari_tunggak));
+  if (v === null) return;
+  const n = parseInt(v, 10);
+  if (!n || n < 1 || n > o.hari_tunggak) { alert("Jumlah hari tidak valid."); return; }
+  const r = await apiPost("bayarJimpitan", { id_rumah: id, bulan: rekapJ.bulan, jumlah_hari: n });
+  if (!r.ok) { alert(r.error); return; }
+  alert(r.message);
+  await loadAndShow(currentTab);
+}
+function bindRekapJimpitan() {
+  const q = sel => document.querySelector(sel);
+  const qa = sel => Array.from(document.querySelectorAll(sel));
+  qa("[data-rekap-geser]").forEach(b => b.addEventListener("click", () => {
+    const [y, m] = rekapJ.bulan.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1 + Number(b.dataset.rekapGeser), 1));
+    rekapJ.bulan = dt.toISOString().slice(0, 7); loadAndShow("rekapjimpitan");
+  }));
+  q("#rekapBulan") && q("#rekapBulan").addEventListener("change", e => { if (e.target.value) { rekapJ.bulan = e.target.value; loadAndShow("rekapjimpitan"); } });
+  q("#rekapOnlyTunggak") && q("#rekapOnlyTunggak").addEventListener("change", e => { rekapJ.onlyTunggak = e.target.checked; setScreen(screens.rekapjimpitan()); attachEvents(); });
+  q("#btnRekapCsv") && q("#btnRekapCsv").addEventListener("click", csvRekapBulan);
+  q("#btnRekapWa") && q("#btnRekapWa").addEventListener("click", waRekapBulan);
+  q("#btnDetailCsv") && q("#btnDetailCsv").addEventListener("click", csvDetailRumah);
+  qa("[data-rekap-detail]").forEach(b => b.addEventListener("click", () => { rekapJ.detailId = b.dataset.rekapDetail; goTab("rekapjimpitanDetail"); }));
+  qa("[data-lunasi-jimpitan]").forEach(b => b.addEventListener("click", () => lunasiJimpitan(b.dataset.lunasiJimpitan)));
+  qa("[data-wa-rumah]").forEach(b => b.addEventListener("click", () => waRumah(b.dataset.waRumah)));
+  q("#btnSimpanMulai") && q("#btnSimpanMulai").addEventListener("click", async () => {
+    const tanggal = q("#rekapMulai").value;
+    if (!tanggal) { alert("Pilih tanggal mulai."); return; }
+    if (!confirm("Ubah tanggal mulai tunggakan jimpitan ke " + fmtTanggal(tanggal) + "? Semua rekap dihitung ulang.")) return;
+    const r = await apiPost("setJimpitanMulai", { tanggal });
+    if (!r.ok) { alert(r.error); return; }
+    alert(r.message); loadAndShow("rekapjimpitan");
+  });
 }
 
 /* ---- jimpitan ---- */
