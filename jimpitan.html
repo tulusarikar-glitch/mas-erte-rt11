@@ -235,7 +235,7 @@ async function loadAndShow(tab) {
   attachEvents();
 }
 async function refreshRumah() { const r = await apiGet("getRumah"); if (r.ok) cache.rumah = r.rumah; }
-async function refreshLog() { const r = await apiGet("getJimpitanLog"); if (!r.ok) throw new Error(r.error); cache.log = r.log; cache.totalBelum = r.total_belum_posting; }
+async function refreshLog() { const r = await apiGet("getJimpitanLog"); if (!r.ok) throw new Error(r.error); cache.log = r.log; cache.totalBelum = r.total_belum_posting; if (can.post()) await pstLoad(); else pstData = null; }
 async function refreshKas() { const r = await apiGet("getKas", { jenis_kas: "jimpitan" }); if (!r.ok) throw new Error(r.error); cache.kas = r; }
 async function refreshAll() { await Promise.all([refreshLog(), can.viewKas() ? refreshKas() : Promise.resolve()]); }
 
@@ -365,6 +365,7 @@ const screens = {
       <h2 class="title">Log Menunggu Posting</h2>
       <div class="card"><div class="label">Total menunggu</div><div class="value-lg">${rupiah(cache.totalBelum)}</div></div>
       <button class="btn block" id="btnPosting" ${belum.length?'':'disabled'}>Posting terpilih ke Kas Jimpitan</button>
+      ${pstData ? (pstTotalBarHtml() + pstHtml(pstCfg())) : `
       <div class="card" style="margin-top:14px">
         ${belum.length ? belum.map(l => `
           <div class="item">
@@ -373,7 +374,7 @@ const screens = {
             <div class="item-sub">${fmtWaktu(l.tanggal)} · dicatat ${esc(l.dicatat_oleh)}</div>
             <div class="btn-row"><button class="btn brick sm" data-del-log="${esc(l.id)}">Hapus</button></div>
           </div>`).join("") : '<div class="empty">Tidak ada log yang menunggu posting.</div>'}
-      </div>`;
+      </div>`}`;
   },
 
   kas(){
@@ -501,6 +502,107 @@ function pilihRumah(id_rumah) {
   }
 }
 
+/* ====================== POSTING PER HARI & PETUGAS ====================== */
+let pstData = null;
+const PST_BLN = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+function pstTgl(ymd) { const m = String(ymd || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? (parseInt(m[3],10) + " " + PST_BLN[parseInt(m[2],10)-1]) : (ymd || "-"); }
+function pstHariLabel(ymd) {
+  const m = String(ymd || "").match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return ymd;
+  return ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"][new Date(Date.UTC(+m[1], +m[2]-1, +m[3])).getUTCDay()] + ", " + pstTgl(ymd);
+}
+async function pstLoad() {
+  try { const r = await apiGet("getPostingJimpitan"); pstData = (r && r.ok) ? r : null; } catch (e) { pstData = null; }
+}
+function pstBadge(pt) {
+  if (pt.diterima === null) return '<span class="item-sub">Belum dicek</span>';
+  if (pt.selisih === 0) return '<span class="badge ok">Cocok ✓</span>';
+  return '<span style="font-weight:700;color:var(--brick)">Selisih ' + (pt.selisih > 0 ? '+' : '-') + rupiah(Math.abs(pt.selisih)) + '</span>';
+}
+function pstHtml(cfg) {
+  if (!pstData) return "";
+  if (!pstData.hari.length) return '<div class="card"><div class="empty">Tidak ada log yang menunggu posting.</div></div>';
+  const chk = cfg.checked ? "checked" : "";
+  return pstData.hari.map(d => `
+    <div class="card" style="margin-top:12px">
+      <div class="row">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" class="pst-hari" data-tgl="${esc(d.tanggal)}" ${chk}><b>${esc(pstHariLabel(d.tanggal))}</b></label>
+        <span style="font-weight:700">${rupiah(d.total_belum)}</span>
+      </div>
+      <div class="item-sub">${d.jumlah_log} log · ${d.petugas.length} petugas</div>
+      ${d.petugas.map(pt => `
+        <div class="item" style="margin-top:8px">
+          <div class="row">
+            <label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" class="pst-ptg" data-tgl="${esc(d.tanggal)}" data-ptg="${esc(pt.username || '-')}" ${chk}><span class="item-title">${esc(pt.nama)}</span><span class="item-sub">· ${pt.rumah} rumah</span></label>
+            <span style="font-weight:700">${rupiah(pt.total_belum)}</span>
+          </div>
+          <div class="pst-cek" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 4px 26px">
+            <span class="item-sub">Sistem mencatat ${rupiah(pt.total_dicatat)}${pt.total_dicatat !== pt.total_belum ? ' (termasuk yang sudah diposting)' : ''}</span>
+            ${cfg.canCatat
+              ? `<input type="number" min="0" class="pst-in" placeholder="Uang diterima" value="${pt.diterima === null ? '' : pt.diterima}" style="width:130px;padding:6px 8px"><button class="btn outline sm" data-pst-simpan data-tgl="${esc(d.tanggal)}" data-ptg="${esc(pt.username || '-')}">Simpan</button>`
+              : (pt.diterima !== null ? `<span class="item-sub">Diterima ${rupiah(pt.diterima)}</span>` : '')}
+            ${pstBadge(pt)}
+          </div>
+          <details style="margin-left:26px"><summary class="item-sub" style="cursor:pointer">Lihat ${pt.logs.length} rumah</summary>
+            ${pt.logs.map(l => `
+              <div class="row" style="padding:6px 0;border-top:1px solid var(--line,#eee);align-items:flex-start">
+                <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" class="${cfg.logClass} pst-log" value="${esc(l.id)}" data-tgl="${esc(d.tanggal)}" data-ptg="${esc(pt.username || '-')}" data-jml="${Number(l.jumlah) || 0}" ${chk}>
+                  <span>${esc(l.nama_rumah)}${l.jam ? ` <span class="item-sub">${esc(l.jam)}</span>` : ''}
+                    ${l.jenis === 'pelunasan' ? `<div class="item-sub" style="color:var(--green)">pelunasan untuk ${esc(pstTgl(l.untuk_tanggal))}</div>` : (l.catatan ? `<div class="item-sub">${esc(l.catatan)}</div>` : '')}</span></label>
+                <span style="text-align:right"><b>${rupiah(l.jumlah)}</b><br><button class="btn brick sm" ${cfg.delAttr}="${esc(l.id)}">Hapus</button></span>
+              </div>`).join('')}
+          </details>
+        </div>`).join('')}
+    </div>`).join('');
+}
+function pstTotalBarHtml() {
+  return '<div class="card" style="margin-top:8px"><div class="row"><span class="label">Terpilih untuk diposting</span><span id="pstTotalTerpilih" style="font-weight:700">Rp 0</span></div></div>';
+}
+function pstSyncGroups() {
+  const logs = Array.from(document.querySelectorAll(".pst-log"));
+  document.querySelectorAll(".pst-ptg").forEach(g => { const l = logs.filter(x => x.dataset.tgl === g.dataset.tgl && x.dataset.ptg === g.dataset.ptg); g.checked = l.length > 0 && l.every(x => x.checked); });
+  document.querySelectorAll(".pst-hari").forEach(g => { const l = logs.filter(x => x.dataset.tgl === g.dataset.tgl); g.checked = l.length > 0 && l.every(x => x.checked); });
+}
+function pstUpdTotal() {
+  const el = document.getElementById("pstTotalTerpilih"); if (!el) return;
+  const on = Array.from(document.querySelectorAll(".pst-log:checked"));
+  el.textContent = rupiah(on.reduce((a, x) => a + (Number(x.dataset.jml) || 0), 0)) + " (" + on.length + " log)";
+}
+function pstRestore(keep) {
+  document.querySelectorAll(".pst-log").forEach(x => { x.checked = keep.has(x.value); });
+  pstSyncGroups(); pstUpdTotal();
+}
+async function pstSimpan(btn, cfg) {
+  const box = btn.closest(".pst-cek"); const val = box.querySelector(".pst-in").value.trim();
+  if (val !== "" && (isNaN(Number(val)) || Number(val) < 0)) { alert("Isi angka 0 atau lebih."); return; }
+  btn.disabled = true; btn.textContent = "…";
+  try {
+    const r = await apiPost("setSetoranDiterima", { tanggal: btn.dataset.tgl, petugas: btn.dataset.ptg, diterima: val });
+    if (!r.ok) { alert(r.error); btn.disabled = false; btn.textContent = "Simpan"; return; }
+  } catch (e) { alert("Gagal menyimpan: " + e.message); btn.disabled = false; btn.textContent = "Simpan"; return; }
+  const keep = new Set(Array.from(document.querySelectorAll(".pst-log:checked")).map(x => x.value));
+  await cfg.reload(keep);
+}
+function pstBind(cfg) {
+  const qa = s => Array.from(document.querySelectorAll(s));
+  const logs = () => qa(".pst-log");
+  qa(".pst-hari").forEach(cb => cb.addEventListener("change", () => {
+    logs().filter(x => x.dataset.tgl === cb.dataset.tgl).forEach(x => { x.checked = cb.checked; });
+    pstSyncGroups(); pstUpdTotal();
+  }));
+  qa(".pst-ptg").forEach(cb => cb.addEventListener("change", () => {
+    logs().filter(x => x.dataset.tgl === cb.dataset.tgl && x.dataset.ptg === cb.dataset.ptg).forEach(x => { x.checked = cb.checked; });
+    pstSyncGroups(); pstUpdTotal();
+  }));
+  logs().forEach(cb => cb.addEventListener("change", () => { pstSyncGroups(); pstUpdTotal(); }));
+  qa("[data-pst-simpan]").forEach(b => b.addEventListener("click", () => pstSimpan(b, cfg)));
+  pstSyncGroups(); pstUpdTotal();
+}
+
+function pstCfg() {
+  return { logClass: "log-check", delAttr: "data-del-log", checked: true, canCatat: can.post(),
+    reload: async keep => { await pstLoad(); setScreen(screens.tinjau()); attachEvents(); pstRestore(keep); } };
+}
+
 /* ====================== SUBMIT ====================== */
 async function submitScan(id_rumah) {
   const btn = document.getElementById("btnSimpanScan");
@@ -602,6 +704,7 @@ function attachEvents() {
   });
   qa("[data-del-log]").forEach(b => b.addEventListener("click", () => delLog(b.dataset.delLog)));
   q("#btnPosting") && q("#btnPosting").addEventListener("click", doPosting);
+  pstBind(pstCfg());
   q("#btnTambahMutasiKas") && q("#btnTambahMutasiKas").addEventListener("click", () => { formError=""; setScreen(mutasiKasForm()); attachEvents(); });
   q("#btnSimpanMutasiKas") && q("#btnSimpanMutasiKas").addEventListener("click", submitMutasiKas);
   q("#btnCetakStiker") && q("#btnCetakStiker").addEventListener("click", cetakStiker);
