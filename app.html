@@ -161,6 +161,15 @@ button.stat.tap:active, .brow:active{background:var(--bg);}
 @media (prefers-color-scheme: dark){ .tog input:checked + span.ok{background:#1E3A2A;} .tog input:checked + span.no{background:#3C2521;} }
 .btn-row input{flex:1; min-width:0; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-family:inherit; font-size:13.5px;}
 .btn-row a.btn{text-decoration:none;}
+
+.kas-card{border-radius:16px; padding:14px 16px; margin-bottom:12px; border:1px solid var(--line);}
+.kas-card.ok{background:#DCEBE0;}
+.kas-card.due{background:#F3DCD8;}
+.kas-card .k-title{font-weight:700; font-size:13.5px; margin-bottom:2px;}
+.kas-card .k-sub{font-size:12.5px; color:var(--sub); margin-bottom:6px;}
+.kas-card .k-amt{font-family:'Fraunces',serif; font-size:22px; font-weight:600;}
+.kas-card.ok .k-amt{color:var(--green);}
+.kas-card.due .k-amt{color:var(--brick);}
 </style>
 </head>
 <body>
@@ -403,6 +412,11 @@ async function loadAndShow(tab) {
   attachEvents();
 }
 async function refreshBeranda() {
+  if (can.isWarga()) {
+    const d = await apiGet("getDashboardWarga");
+    cache.dashboardWarga = d.ok ? d : null;
+    return;
+  }
   const [w, k] = await Promise.all([apiGet("getWargaKK"), apiGet("getKas", { jenis_kas: "rt" })]);
   if (w.ok) { cache.totalKK = w.total_kk; cache.totalJiwa = w.total_jiwa; }
   if (k.ok) { cache.kas = k; }
@@ -582,8 +596,44 @@ function bindWargaCari() {
   hasil.addEventListener("click", e => { const b = e.target.closest("[data-buka-kk]"); if (b) openKK(b.dataset.bukaKk); });
 }
 
+function dashboardWargaHTML() {
+  const d = cache.dashboardWarga;
+  if (!d) return '<div class="empty">Data rumah/KK Anda belum ditautkan. Hubungi Sekretaris/Ketua RT.</div>';
+  const j = d.jimpitan, i = d.iuran;
+  const jHtml = !j ? '<div class="card"><div class="label">Jimpitan</div><div class="item-sub">Rumah Anda belum ditautkan. Hubungi Ketua/Sekretaris RT.</div></div>'
+    : j.status_jimpitan === "bebas" ? `<div class="kas-card ok"><div class="k-title">Jimpitan — ${esc(j.nama_rumah)}</div><div class="k-sub">Rumah ini dibebaskan dari kewajiban jimpitan.</div></div>`
+    : j.total_tunggakan > 0 ? `<div class="kas-card due">
+        <div class="k-title">Jimpitan — ${esc(j.nama_rumah)}</div>
+        <div class="k-sub">Menunggak ${j.hari_tunggak} hari · dihitung s/d ${fmtTanggal(j.dihitung_sampai)}</div>
+        <div class="k-amt">${rupiah(j.total_tunggakan)}</div>
+      </div>`
+    : `<div class="kas-card ok">
+        <div class="k-title">Jimpitan — ${esc(j.nama_rumah)}</div>
+        <div class="k-sub">Setor ${j.hari_setor}/${j.hari_wajib} hari bulan ini · Lunas, tidak ada tunggakan</div>
+        <div class="k-amt">${rupiah(j.setor_bulan)}</div>
+      </div>`;
+  const iHtml = !i ? '' : i.total_tunggakan > 0 ? `<div class="kas-card due">
+        <div class="k-title">Iuran RT — KK ${esc(i.no_kk)}</div>
+        <div class="k-sub">Menunggak ${i.jumlah_pertemuan_tunggakan} pertemuan</div>
+        <div class="k-amt">${rupiah(i.total_tunggakan)}</div>
+      </div>` : `<div class="kas-card ok">
+        <div class="k-title">Iuran RT — KK ${esc(i.no_kk)}</div>
+        <div class="k-sub">Semua pertemuan lunas, tidak ada tunggakan</div>
+      </div>`;
+  return `
+    <div class="section-tag">KAS ANDA</div>
+    <h2 class="title">Selamat datang, ${esc(session.nama)}</h2>
+    ${jHtml}
+    ${iHtml}
+    <h2 class="title" style="margin-top:20px">Pengumuman terbaru</h2>
+    <div class="card">
+      ${cache.pengumuman.length ? cache.pengumuman.slice(0,2).map(p=>`<div class="item"><div class="item-title">${esc(p.judul)}</div><div class="item-sub">${fmtTanggal(p.tanggal)}${p.tempat?(' · '+esc(p.tempat)):''}</div></div>`).join("") : '<div class="empty">Belum ada pengumuman.</div>'}
+    </div>`;
+}
+
 const screens = {
   beranda(){
+    if (can.isWarga()) return dashboardWargaHTML();
     return `
       <div class="section-tag">RINGKASAN DUKUH</div>
       <h2 class="title">Selamat datang, ${esc(session.nama)}</h2>
