@@ -511,6 +511,7 @@ function kasLedgerBlock(l) {
       ${editable ? '' : '<div class="geo">Tampilan lihat-saja untuk peran Anda.</div>'}
     </div>
     ${editable ? `<button class="btn gold block" data-tambah-mutasi="${jenisKas}">+ Catat mutasi ${esc(title)}</button>` : ''}
+    <button class="btn outline block" data-laporan-kas="${jenisKas}" style="margin-top:8px">⬇ Unduh laporan (PDF / Excel)</button>
     <div class="card" style="margin-top:10px">
       ${data.mutasi.length ? data.mutasi.map(m=>`
         <div class="item">
@@ -1555,6 +1556,243 @@ function rumahPickerFormKK(no_kk) {
     <button class="btn block" id="btnSimpanRumahKK" data-no-kk="${esc(no_kk)}">Simpan</button>`;
 }
 
+/* ====================== LAPORAN KAS: unduh PDF / Excel ====================== */
+// Seluruh proses di perangkat (data diambil dari cache getKas yang sudah dimuat) — tidak ada perubahan backend.
+// Pustaka PDF/Excel dimuat dari CDN hanya saat tombol unduh ditekan, jadi tidak memberatkan pemuatan awal aplikasi.
+const LAP_CDN = {
+  jspdf: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+  autotable: "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js",
+  exceljs: "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"
+};
+const LAP_JUDUL = { rt: "LAPORAN KAS RT", jimpitan: "LAPORAN KAS JIMPITAN (KARANG TARUNA)", gerabah: "LAPORAN KAS GERABAH" };
+const LAP_TTD = { rt: ["Ketua RT 011", "Bendahara RT 011"], gerabah: ["Ketua RT 011", "Bendahara RT 011"], jimpitan: ["Ketua Karang Taruna", "Bendahara Karang Taruna"] };
+let lapKas = { jenis: "rt", mode: "bulan", bulan: "", dari: "", sampai: "", busy: false };
+
+function lapBulanIni() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+function lapTglKey(v) { // tanggal mutasi -> "YYYY-MM-DD" (aman untuk string "2026-10-01" maupun ISO/Date dari Sheets)
+  if (!v) return "";
+  const s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(v);
+  return isNaN(d) ? "" : d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function lapDataKas(jenis) { return jenis === "jimpitan" ? cache.kasJimpitan : jenis === "gerabah" ? cache.kasGerabah : cache.kas; }
+function lapBolehLihat(jenis) { return jenis === "jimpitan" ? can.viewKasJimpitan() : true; }
+function lapTglIndo(key) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key || ""); return m ? parseInt(m[3], 10) + " " + bulanLabel(m[1] + "-" + m[2]) : "-"; }
+
+// Hitung isi laporan untuk periode terpilih (urut tanggal naik, saldo berjalan, saldo awal = semua mutasi sebelum periode).
+function lapHitung() {
+  const L = lapKas, src = (lapDataKas(L.jenis) || { mutasi: [] }).mutasi || [];
+  let from = "", to = "", label = "Semua periode";
+  if (L.mode === "bulan") {
+    if (!/^\d{4}-\d{2}$/.test(L.bulan)) return { error: "Pilih bulan terlebih dahulu." };
+    from = L.bulan + "-01"; to = L.bulan + "-31"; label = bulanLabel(L.bulan);
+  } else if (L.mode === "rentang") {
+    from = L.dari || ""; to = L.sampai || "";
+    if (!from && !to) return { error: "Isi minimal salah satu tanggal (dari / sampai)." };
+    if (from && to && from > to) return { error: "Tanggal 'dari' tidak boleh setelah tanggal 'sampai'." };
+    label = (from ? lapTglIndo(from) : "awal") + " s/d " + (to ? lapTglIndo(to) : "sekarang");
+  }
+  // sumber sudah terurut menurun dari server (urutan baris sheet dipertahankan untuk tanggal yang sama)
+  const arr = src.map((m, i) => ({ m, i, k: lapTglKey(m.tanggal) })).sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : a.i - b.i);
+  const sgn = m => String(m.jenis).toLowerCase() === "masuk" ? 1 : -1;
+  let saldoAwal = 0, masuk = 0, keluar = 0, saldo = 0;
+  const rows = [];
+  arr.forEach(({ m, k }) => {
+    const j = Number(m.jumlah) || 0;
+    if (from && k < from) { saldoAwal += sgn(m) * j; return; }
+    if (to && k > to) return;
+    rows.push({ tanggal: k, keterangan: String(m.keterangan || ""), masuk: sgn(m) > 0 ? j : 0, keluar: sgn(m) < 0 ? j : 0, oleh: m.dicatat_oleh || "" });
+  });
+  saldo = saldoAwal;
+  rows.forEach(r => { saldo += r.masuk - r.keluar; r.saldo = saldo; masuk += r.masuk; keluar += r.keluar; });
+  return { jenis: L.jenis, title: LAP_JUDUL[L.jenis] || "LAPORAN KAS", label, rows, saldoAwal, masuk, keluar, saldoAkhir: saldo,
+           fileTag: L.mode === "bulan" ? L.bulan : L.mode === "rentang" ? ((from || "awal") + "_sd_" + (to || "kini")) : "semua" };
+}
+
+function bukaLaporanKas(jenis) {
+  lapKas = { jenis, mode: "bulan", bulan: lapBulanIni(), dari: "", sampai: "", busy: false };
+  formError = ""; setScreen(laporanKasScreen()); attachEvents();
+}
+function lapRingkasHtml() {
+  const d = lapHitung();
+  if (d.error) return `<div class="err">${esc(d.error)}</div>`;
+  return `<div class="card">
+    <div class="label">${esc(d.label)}</div>
+    <div class="item"><div class="row"><span>Saldo awal</span><b>${rupiah(d.saldoAwal)}</b></div></div>
+    <div class="item"><div class="row"><span>Pemasukan</span><b style="color:var(--green)">${rupiah(d.masuk)}</b></div></div>
+    <div class="item"><div class="row"><span>Pengeluaran</span><b style="color:var(--brick)">${rupiah(d.keluar)}</b></div></div>
+    <div class="item"><div class="row"><span>Saldo akhir</span><b>${rupiah(d.saldoAkhir)}</b></div><div class="item-sub">${d.rows.length} transaksi pada periode ini</div></div>
+  </div>`;
+}
+function laporanKasScreen() {
+  const L = lapKas;
+  return `
+    <button class="back" data-back-tab="kas">‹ Kembali</button>
+    <div class="section-tag">UNDUH LAPORAN</div>
+    <h2 class="title">${esc(KAS_LABEL[L.jenis] || "Kas")}</h2>
+    <div class="field"><label>Periode</label>
+      <select id="lapMode">
+        <option value="bulan" ${L.mode === "bulan" ? "selected" : ""}>Per bulan</option>
+        <option value="rentang" ${L.mode === "rentang" ? "selected" : ""}>Rentang tanggal</option>
+        <option value="semua" ${L.mode === "semua" ? "selected" : ""}>Semua (sejak awal)</option>
+      </select></div>
+    ${L.mode === "bulan" ? `<div class="field"><label>Bulan</label><input id="lapBulan" type="month" value="${esc(L.bulan)}"></div>` : ""}
+    ${L.mode === "rentang" ? `<div class="field"><label>Dari tanggal</label><input id="lapDari" type="date" value="${esc(L.dari)}"></div>
+      <div class="field"><label>Sampai tanggal</label><input id="lapSampai" type="date" value="${esc(L.sampai)}"></div>` : ""}
+    <div id="lapRingkas">${lapRingkasHtml()}</div>
+    <div id="lapErr"></div>
+    <div class="btn-row">
+      <button class="btn block" id="btnLapPdf">⬇ Unduh PDF</button>
+      <button class="btn outline block" id="btnLapXlsx">⬇ Unduh Excel</button>
+    </div>
+    <div class="mask-note">PDF siap cetak dengan kop RT dan kolom tanda tangan (ditandatangani manual). Excel berisi rumus saldo sehingga bisa diolah lagi.</div>`;
+}
+function bindLaporanKas() {
+  const q = s => document.querySelector(s);
+  const upd = () => { const el = q("#lapRingkas"); if (el) el.innerHTML = lapRingkasHtml(); };
+  q("#lapMode") && q("#lapMode").addEventListener("change", e => { lapKas.mode = e.target.value; setScreen(laporanKasScreen()); attachEvents(); });
+  q("#lapBulan") && q("#lapBulan").addEventListener("input", e => { lapKas.bulan = e.target.value; upd(); });
+  q("#lapDari") && q("#lapDari").addEventListener("input", e => { lapKas.dari = e.target.value; upd(); });
+  q("#lapSampai") && q("#lapSampai").addEventListener("input", e => { lapKas.sampai = e.target.value; upd(); });
+  q("#btnLapPdf") && q("#btnLapPdf").addEventListener("click", () => lapUnduh("pdf"));
+  q("#btnLapXlsx") && q("#btnLapXlsx").addEventListener("click", () => lapUnduh("xlsx"));
+}
+function lapMuatSkrip(url) {
+  return new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = url; s.async = true;
+    s.onload = () => res();
+    s.onerror = () => { s.remove(); rej(new Error("Gagal memuat komponen unduhan. Periksa koneksi internet lalu coba lagi.")); };
+    document.head.appendChild(s);
+  });
+}
+async function lapUnduh(fmt) {
+  if (lapKas.busy) return;
+  const d = lapHitung(), errEl = document.getElementById("lapErr");
+  if (errEl) errEl.innerHTML = "";
+  if (d.error) { if (errEl) errEl.innerHTML = `<div class="err">${esc(d.error)}</div>`; return; }
+  if (!lapBolehLihat(lapKas.jenis)) { if (errEl) errEl.innerHTML = '<div class="err">Peran Anda tidak berhak mengunduh laporan ini.</div>'; return; }
+  const bP = document.getElementById("btnLapPdf"), bX = document.getElementById("btnLapXlsx");
+  const label = { p: bP && bP.textContent, x: bX && bX.textContent };
+  lapKas.busy = true; [bP, bX].forEach(b => b && (b.disabled = true));
+  (fmt === "pdf" ? bP : bX).textContent = "Menyiapkan…";
+  try {
+    const nama = "laporan-kas-" + lapKas.jenis + "-" + d.fileTag;
+    if (fmt === "pdf") {
+      if (!(window.jspdf && window.jspdf.jsPDF)) await lapMuatSkrip(LAP_CDN.jspdf);
+      if (!(window.jspdf && window.jspdf.jsPDF.API.autoTable)) await lapMuatSkrip(LAP_CDN.autotable);
+      lapSimpan(lapBuatPdf(d), nama + ".pdf");
+    } else {
+      if (!window.ExcelJS) await lapMuatSkrip(LAP_CDN.exceljs);
+      lapSimpan(await lapBuatXlsx(d), nama + ".xlsx");
+    }
+  } catch (e) {
+    if (errEl) errEl.innerHTML = `<div class="err">${esc(e && e.message ? e.message : "Gagal membuat file.")}</div>`;
+  } finally {
+    lapKas.busy = false;
+    if (bP) { bP.disabled = false; bP.textContent = label.p; }
+    if (bX) { bX.disabled = false; bX.textContent = label.x; }
+  }
+}
+function lapSimpan(blob, nama) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = nama;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+const lapNum = n => (Number(n) || 0).toLocaleString("id-ID");
+const lapTglCetak = () => new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+
+function lapBuatPdf(d) {
+  const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 15;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(12);
+  doc.text("PENGURUS RUKUN TETANGGA (RT) 011", W / 2, 15, { align: "center" });
+  doc.setFontSize(10);
+  doc.text("DUKUH TULUSARI - DESA KARANGWARU", W / 2, 20, { align: "center" });
+  doc.text("KECAMATAN PLUPUH - KABUPATEN SRAGEN", W / 2, 25, { align: "center" });
+  doc.setLineWidth(0.7); doc.line(M, 28, W - M, 28); doc.setLineWidth(0.2); doc.line(M, 29.2, W - M, 29.2);
+  doc.setFontSize(13); doc.text(d.title, W / 2, 38, { align: "center" });
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+  doc.text("Periode: " + d.label, W / 2, 44, { align: "center" });
+
+  const body = [["", "", "Saldo awal", "", "", lapNum(d.saldoAwal)]]
+    .concat(d.rows.map((r, i) => [String(i + 1), lapTglIndo(r.tanggal), r.keterangan, r.masuk ? lapNum(r.masuk) : "", r.keluar ? lapNum(r.keluar) : "", lapNum(r.saldo)]));
+  doc.autoTable({
+    startY: 50, margin: { left: M, right: M, bottom: 18 },
+    head: [["No", "Tanggal", "Keterangan", "Masuk (Rp)", "Keluar (Rp)", "Saldo (Rp)"]],
+    body, foot: [["", "", "Jumlah / Saldo akhir", lapNum(d.masuk), lapNum(d.keluar), lapNum(d.saldoAkhir)]],
+    showFoot: "lastPage", theme: "grid",
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 2, lineColor: [200, 205, 195], lineWidth: 0.2, textColor: [32, 38, 29] },
+    headStyles: { fillColor: [31, 77, 58], textColor: 255, halign: "center" },
+    footStyles: { fillColor: [220, 235, 224], textColor: [32, 38, 29], fontStyle: "bold" },
+    columnStyles: { 0: { cellWidth: 10, halign: "center" }, 1: { cellWidth: 30 }, 3: { halign: "right", cellWidth: 27 }, 4: { halign: "right", cellWidth: 27 }, 5: { halign: "right", cellWidth: 28 } },
+    didParseCell: h => { if (h.section === "body" && h.row.index === 0) { h.cell.styles.fontStyle = "italic"; h.cell.styles.fillColor = [244, 246, 240]; } }
+  });
+  let y = doc.lastAutoTable.finalY + 12;
+  if (y + 48 > H - M) { doc.addPage(); y = 25; }
+  const t = LAP_TTD[d.jenis] || LAP_TTD.rt, xl = M + 38, xr = W - M - 38;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+  doc.text("Tulusari, " + lapTglCetak(), W - M, y, { align: "right" });
+  doc.text("Mengetahui,", xl, y + 7, { align: "center" });
+  doc.text(t[0], xl, y + 12, { align: "center" });
+  doc.text(t[1], xr, y + 12, { align: "center" });
+  doc.text("(.............................)", xl, y + 36, { align: "center" });
+  doc.text("(.............................)", xr, y + 36, { align: "center" });
+  const n = doc.getNumberOfPages();
+  for (let i = 1; i <= n; i++) {
+    doc.setPage(i); doc.setFontSize(8); doc.setTextColor(120);
+    doc.text("Mas eRTe Mobile - " + d.title, M, H - 8);
+    doc.text("Halaman " + i + " / " + n, W - M, H - 8, { align: "right" });
+  }
+  return doc.output("blob");
+}
+
+async function lapBuatXlsx(d) {
+  const wb = new window.ExcelJS.Workbook();
+  wb.creator = "Mas eRTe Mobile"; wb.created = new Date();
+  const ws = wb.addWorksheet("Laporan", { views: [{ state: "frozen", ySplit: 9 }], pageSetup: { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+  ws.columns = [{ width: 6 }, { width: 18 }, { width: 44 }, { width: 16 }, { width: 16 }, { width: 18 }];
+  const merge = (r, text, size, bold) => {
+    ws.mergeCells(r, 1, r, 6);
+    const c = ws.getCell(r, 1); c.value = text; c.font = { bold: !!bold, size }; c.alignment = { horizontal: "center" };
+  };
+  merge(1, "PENGURUS RUKUN TETANGGA (RT) 011", 12, true);
+  merge(2, "DUKUH TULUSARI - DESA KARANGWARU", 11, true);
+  merge(3, "KECAMATAN PLUPUH - KABUPATEN SRAGEN", 11, true);
+  merge(5, d.title, 13, true);
+  merge(6, "Periode: " + d.label, 11, false);
+  merge(7, "Dicetak: " + lapTglCetak(), 9, false);
+  const HR = 9, hdr = ws.getRow(HR);
+  hdr.values = ["No", "Tanggal", "Keterangan", "Masuk (Rp)", "Keluar (Rp)", "Saldo (Rp)"];
+  hdr.eachCell(c => { c.font = { bold: true, color: { argb: "FFFFFFFF" } }; c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4D3A" } }; c.alignment = { horizontal: "center", vertical: "middle" }; });
+  const thin = { style: "thin", color: { argb: "FFC8CDC3" } }, box = { top: thin, left: thin, bottom: thin, right: thin };
+  const R0 = HR + 1; // baris saldo awal
+  ws.getCell(R0, 3).value = "Saldo awal"; ws.getCell(R0, 6).value = d.saldoAwal;
+  ws.getRow(R0).font = { italic: true };
+  d.rows.forEach((r, i) => {
+    const n = R0 + 1 + i, row = ws.getRow(n);
+    row.getCell(1).value = i + 1; row.getCell(2).value = lapTglIndo(r.tanggal); row.getCell(3).value = r.keterangan;
+    row.getCell(4).value = r.masuk || null; row.getCell(5).value = r.keluar || null;
+    row.getCell(6).value = { formula: "F" + (n - 1) + "+N(D" + n + ")-N(E" + n + ")", result: r.saldo };
+  });
+  const last = R0 + d.rows.length, T = last + 1;
+  ws.getCell(T, 3).value = "Jumlah / Saldo akhir";
+  ws.getCell(T, 4).value = d.rows.length ? { formula: "SUM(D" + (R0 + 1) + ":D" + last + ")", result: d.masuk } : 0;
+  ws.getCell(T, 5).value = d.rows.length ? { formula: "SUM(E" + (R0 + 1) + ":E" + last + ")", result: d.keluar } : 0;
+  ws.getCell(T, 6).value = { formula: "F" + R0 + "+D" + T + "-E" + T, result: d.saldoAkhir };
+  for (let r = R0; r <= T; r++) for (let c = 1; c <= 6; c++) {
+    const cell = ws.getCell(r, c); cell.border = box;
+    if (c >= 4) cell.numFmt = "#,##0"; if (c === 1) cell.alignment = { horizontal: "center" };
+    if (c === 3) cell.alignment = { wrapText: true, vertical: "top" };
+  }
+  ws.getRow(T).font = { bold: true };
+  for (let c = 1; c <= 6; c++) ws.getCell(T, c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCEBE0" } };
+  const buf = await wb.xlsx.writeBuffer();
+  return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
 /* ====================== FORM: Mutasi Kas (RT, Jimpitan & Gerabah) ====================== */
 const KAS_LABEL = { rt: "Kas RT", jimpitan: "Kas Jimpitan", gerabah: "Kas Gerabah" };
 function mutasiForm(existing, jenisKas) {
@@ -2113,6 +2351,8 @@ function attachEvents() {
     formError = ""; setScreen(mutasiForm(m, jenisKas)); attachEvents();
   }));
   qa("[data-del-mutasi]").forEach(b => b.addEventListener("click", () => delMutasi(b.dataset.delMutasi, b.dataset.jenisKas || "rt")));
+  qa("[data-laporan-kas]").forEach(b => b.addEventListener("click", () => bukaLaporanKas(b.dataset.laporanKas)));
+  bindLaporanKas();
 
   q("#btnTambahAkun") && q("#btnTambahAkun").addEventListener("click", () => { formError=""; setScreen(userForm()); attachEvents(); });
   q("#btnSimpanAkun") && q("#btnSimpanAkun").addEventListener("click", submitUser);
