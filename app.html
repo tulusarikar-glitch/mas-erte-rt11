@@ -337,8 +337,7 @@ function loginScreen() {
         <div class="field"><label>Password</label><input id="fPassword" type="password" autocomplete="current-password"></div>
         <button class="btn block" id="btnLoginPengurus">Masuk</button>
       ` : `
-        <div class="field"><label>Nama lengkap (sesuai Data Warga)</label><input id="fNama"></div>
-        <div class="field"><label>NIK</label><input id="fNik" inputmode="numeric"></div>
+        <div class="field"><label>NIK</label><input id="fNik" inputmode="numeric" autocomplete="off" placeholder="Masukkan 16 digit NIK Anda"></div>
         <button class="btn gold block" id="btnLoginWarga">Masuk sebagai Warga</button>
       `}
     </div>`;
@@ -2563,11 +2562,11 @@ async function doLoginPengurus() {
   loadAndShow(currentTab);
 }
 async function doLoginWarga() {
-  const nama = document.getElementById("fNama").value.trim();
-  const nik = document.getElementById("fNik").value.trim();
-  if (!nama || !nik) { formError = "Nama dan NIK wajib diisi."; render(); return; }
+  const nik = document.getElementById("fNik").value.replace(/\D/g, "");
+  if (!nik) { formError = "NIK wajib diisi."; render(); return; }
+  if (nik.length !== 16) { formError = "NIK harus 16 digit angka. Periksa kembali."; render(); return; }
   formError = "Memeriksa…"; render();
-  const r = await apiGet("login", { mode: "warga", nama, nik });
+  const r = await apiGet("login", { mode: "warga", nik });
   if (!r.ok) { formError = r.error; render(); return; }
   formError = "";
   saveSession(r.user);
