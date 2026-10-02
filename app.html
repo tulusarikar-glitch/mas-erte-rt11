@@ -1330,7 +1330,12 @@ function parseKKText(text) {
   const seen = {}; const uniq = niks.filter(f => seen[f.n] ? false : (seen[f.n] = true));
   if (!uniq.length) return [];
   const HEAD = /KARTU|KELUARGA$|NAMA|LENGKAP|\bNIK\b|JENIS|KELAMIN|TEMPAT|LAHIR|TANGGAL|AGAMA|PENDIDIKAN|PEKERJAAN|GOLONGAN|DARAH|STATUS|PERKAWINAN|HUBUNGAN|KEWARGANEGARAAN|DOKUMEN|PASPOR|KITAS|KITAP|ORANG TUA|\bAYAH\b|\bIBU\b|DESA|KELURAHAN|KECAMATAN|KABUPATEN|KOTA|PROVINSI|ALAMAT|DUSUN|KODE POS|\bRT\b|\bRW\b|DIKELUARKAN|KEPALA DINAS|KEPALA KELUARGA|PENCATATAN|SIPIL|HALAMAN|WNI|WNA|ISLAM|KRISTEN|KATOLIK|HINDU|BUDDHA|BUDHA|KONGHUCU|LAKI|PEREMPUAN|KAWIN|CERAI|ISTRI|SUAMI|^ANAK$|MENANTU|CUCU|MERTUA|FAMILI|PELAJAR|MAHASISWA|PETANI|BURUH|WIRASWASTA|KARYAWAN|SWASTA|\bPNS\b|MENGURUS|RUMAH TANGGA|PEDAGANG|DAGANG|NELAYAN|PENSIUN|TNI|POLRI|GURU|TAMAT|SEKOLAH|BELUM|DIPLOMA|SLTA|SLTP|SEDERAJAT|TIDAK|\bSD\b|LAINNYA|SEKRETARIS/;
-  const isName = l => /^[A-Za-z .,'\-]{3,}$/.test(l) && l === l.toUpperCase() && !HEAD.test(l.toUpperCase());
+  const isName = l => {
+    if (!/^[A-Za-z .,'\-]{3,60}$/.test(l)) return false;
+    if (HEAD.test(l.toUpperCase())) return false;
+    if (l.trim().split(/\s+/).length > 6) return false;
+    return true;
+  };
   const usedName = {};
   const pickName = (idx, nikStr) => {
     const rest = lines[idx].replace(nikStr, "").replace(/^[\d\s.]+/, "").trim();
@@ -1408,7 +1413,9 @@ function impDownloadTemplate() {
 
 /* ---- Simpan ---- */
 async function impSave() {
-  const btn = document.getElementById("impSave"); btn.disabled = true; btn.textContent = "Menyimpan…";
+  const btn = document.getElementById("impSave");
+  if (btn.disabled) return; // cegah klik ganda terkirim 2x ke server
+  btn.disabled = true; btn.textContent = "Menyimpan…";
   imp.err = "";
   const r = await apiPost("importWarga", { rows: imp.rows });
   if (!r.ok) { imp.err = r.error; imporRender(); return; }
