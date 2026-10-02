@@ -268,7 +268,7 @@ const can = {
   finalizeSurat: () => session && session.peran === "ketua",
   processPengaduan: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
   manageKT: () => session && (session.peran === "ketua" || session.peran === "kt_ketua"),
-  viewKasJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_bendahara"),
+  viewKasJimpitan: () => session && (session.peran === "ketua" || session.peran === "kt_ketua" || session.peran === "kt_bendahara" || session.peran === "warga"),
   manageKontak: () => session && (session.peran === "ketua" || session.peran === "sekretaris"),
   manageIuranRT: () => session && (session.peran === "ketua" || session.peran === "bendahara"),
   hapusPertemuanRT: () => session && session.peran === "ketua",
