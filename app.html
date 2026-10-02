@@ -1197,7 +1197,11 @@ function anggotaForm(no_kk, existing) {
     <h2 class="title">${existing ? "Ubah Anggota" : "Tambah Anggota"} — KK ${esc(no_kk)}</h2>
     ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
     <div class="field"><label>Nama lengkap <span style="color:var(--brick)">*wajib</span></label><input id="fNama" value="${esc(v.nama||'')}"></div>
-    <div class="field"><label>NIK <span style="color:var(--brick)">*wajib</span></label><input id="fNik" inputmode="numeric" value="${esc(v.nik||'')}" ${existing ? "readonly" : ""}></div>
+    <div class="field"><label>NIK <span style="color:var(--brick)">*wajib</span></label><input id="fNik" inputmode="numeric" value="${esc(v.nik||'')}">
+      ${existing ? `<input type="hidden" id="fNikAsli" value="${esc(v.nik||'')}">` : ""}
+      ${existing ? '<div class="mask-note">Ubah kalau ada salah ketik dari hasil scan. Hati-hati — ini dipakai sebagai kunci data, pastikan tidak sama dengan NIK anggota lain.</div>' : ''}
+    </div>
+    ${existing ? `<div class="field"><label>No. KK <span class="opt">(ubah kalau salah baca/ketik)</span></label><input id="fNoKKEdit" inputmode="numeric" value="${esc(v.no_kk||no_kk)}"></div>` : ""}
     <div class="field"><label>Jenis kelamin <span class="opt">(opsional)</span></label>
       <select id="fJk"><option value="">— pilih —</option><option ${v.jenis_kelamin==='Laki-laki'?'selected':''}>Laki-laki</option><option ${v.jenis_kelamin==='Perempuan'?'selected':''}>Perempuan</option></select></div>
     <div class="field"><label>Tempat/Tanggal lahir <span class="opt">(opsional)</span></label><input id="fTtl" value="${esc(v.ttl||'')}" placeholder="Sragen, 17-08-1990"></div>
@@ -2541,27 +2545,34 @@ async function submitKK() {
 async function submitAnggota() {
   const btn = document.getElementById("btnSimpanAnggota");
   const no_kk = btn.dataset.noKk, existing = btn.dataset.existing === "1";
+  const nikBaru = document.getElementById("fNik").value.trim();
   const payload = {
-    no_kk, nama: document.getElementById("fNama").value.trim(), nik: document.getElementById("fNik").value.trim(),
+    no_kk: existing ? document.getElementById("fNoKKEdit").value.trim() : no_kk,
+    nama: document.getElementById("fNama").value.trim(),
+    nik: existing ? document.getElementById("fNikAsli").value.trim() : nikBaru,
     jenis_kelamin: document.getElementById("fJk").value, ttl: document.getElementById("fTtl").value.trim(),
     agama: document.getElementById("fAgama").value.trim(), pendidikan: document.getElementById("fPendidikan").value.trim(),
     pekerjaan: document.getElementById("fPekerjaan").value.trim(), status_kawin: document.getElementById("fKawin").value.trim(),
     status_hubungan: document.getElementById("fHubungan").value.trim(), nama_ayah: document.getElementById("fAyah").value.trim(),
     nama_ibu: document.getElementById("fIbu").value.trim()
   };
+  if (existing) payload.nik_baru = nikBaru;
   const bs = Array.from(document.querySelectorAll(".fBantuan:checked")).map(c => c.value);
   const lainOn = document.getElementById("fBantuanLain").checked, lainTeks = document.getElementById("fBantuanLainTeks").value.replace(/[;,]/g, " ").replace(/\s+/g, " ").trim();
   if (lainOn) bs.push("Lainnya: " + (lainTeks || "-"));
   payload.bantuan = bs.join(";");
   payload.terapkan_kk = document.getElementById("fBantuanKK").checked;
-  if (lainOn && !lainTeks) { formError = "Isi nama program bantuan lainnya, atau hilangkan centangnya."; setScreen(anggotaForm(no_kk, existing ? payload : null)); attachEvents(); return; }
-  if (!payload.nama || !payload.nik) { formError = "Nama dan NIK wajib diisi."; setScreen(anggotaForm(no_kk, existing ? payload : null)); attachEvents(); return; }
+  // Untuk tampilan ulang form kalau ada error — pakai nilai yang baru diketik, bukan nilai lama.
+  const displayVal = Object.assign({}, payload, { nik: nikBaru });
+  if (lainOn && !lainTeks) { formError = "Isi nama program bantuan lainnya, atau hilangkan centangnya."; setScreen(anggotaForm(no_kk, existing ? displayVal : null)); attachEvents(); return; }
+  if (!payload.nama || !nikBaru) { formError = "Nama dan NIK wajib diisi."; setScreen(anggotaForm(no_kk, existing ? displayVal : null)); attachEvents(); return; }
+  if (existing && !payload.no_kk) { formError = "No. KK wajib diisi."; setScreen(anggotaForm(no_kk, existing ? displayVal : null)); attachEvents(); return; }
   btn.disabled = true; btn.textContent = "Menyimpan…";
   const r = await apiPost(existing ? "updateAnggota" : "addAnggota", payload);
-  if (!r.ok) { formError = r.error; setScreen(anggotaForm(no_kk, existing ? payload : null)); attachEvents(); return; }
+  if (!r.ok) { formError = r.error; setScreen(anggotaForm(no_kk, existing ? displayVal : null)); attachEvents(); return; }
   formError = "";
   await refreshWarga();
-  openKK(no_kk);
+  openKK(payload.no_kk || no_kk);
 }
 async function delAnggota(no_kk, nik) {
   if (!confirm("Hapus anggota ini dari data warga?")) return;
