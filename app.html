@@ -565,7 +565,7 @@ function wargaKartu(k, m) {
   return `
     <button class="list-link" data-buka-kk="${esc(k.no_kk)}">
       <span class="txt"><div class="name">${esc(k.kepala)}</div>
-      <div class="desc">No. KK ${esc(lihat ? k.no_kk : maskNik(k.no_kk))} · Rumah: ${esc(k.nama_rumah || "belum ditautkan")} · ${k.jiwa} jiwa</div>
+      <div class="desc">No. KK ${esc(lihat ? k.no_kk : maskNik(k.no_kk))} · Rumah: ${esc(namaRumahKK(k))} · ${k.jiwa} jiwa</div>
       ${cocok}${bdg ? `<div style="margin-top:3px">${bdg}</div>` : ""}</span>
       <span class="chev">›</span>
     </button>`;
@@ -600,19 +600,24 @@ function bindWargaCari() {
 function dashboardWargaHTML() {
   const d = cache.dashboardWarga;
   if (!d) return '<div class="empty">Data rumah/KK Anda belum ditautkan. Hubungi Sekretaris/Ketua RT.</div>';
-  const j = d.jimpitan, i = d.iuran;
-  const jHtml = !j ? '<div class="card"><div class="label">Jimpitan</div><div class="item-sub">Rumah Anda belum ditautkan. Hubungi Ketua/Sekretaris RT.</div></div>'
-    : j.status_jimpitan === "bebas" ? `<div class="kas-card ok"><div class="k-title">Jimpitan — ${esc(j.nama_rumah)}</div><div class="k-sub">Rumah ini dibebaskan dari kewajiban jimpitan.</div></div>`
-    : j.total_tunggakan > 0 ? `<div class="kas-card due">
-        <div class="k-title">Jimpitan — ${esc(j.nama_rumah)}</div>
+  const i = d.iuran;
+  const daftarJ = (d.jimpitan_semua && d.jimpitan_semua.length) ? d.jimpitan_semua : (d.jimpitan ? [d.jimpitan] : []);
+  const jKartu = (j, banyak) => {
+    const judul = `Jimpitan — ${esc(j.nama_rumah)}${banyak && j.rumah_saya ? ' (rumah Anda)' : ''}`;
+    return j.status_jimpitan === "bebas" ? `<div class="kas-card ok"><div class="k-title">${judul}</div><div class="k-sub">Rumah ini dibebaskan dari kewajiban jimpitan.</div></div>`
+      : j.total_tunggakan > 0 ? `<div class="kas-card due">
+        <div class="k-title">${judul}</div>
         <div class="k-sub">Menunggak ${j.hari_tunggak} hari · dihitung s/d ${fmtTanggal(j.dihitung_sampai)}</div>
         <div class="k-amt">${rupiah(j.total_tunggakan)}</div>
       </div>`
-    : `<div class="kas-card ok">
-        <div class="k-title">Jimpitan — ${esc(j.nama_rumah)}</div>
+      : `<div class="kas-card ok">
+        <div class="k-title">${judul}</div>
         <div class="k-sub">Setor ${j.hari_setor}/${j.hari_wajib} hari bulan ini · Lunas, tidak ada tunggakan</div>
         <div class="k-amt">${rupiah(j.setor_bulan)}</div>
       </div>`;
+  };
+  const jHtml = !daftarJ.length ? '<div class="card"><div class="label">Jimpitan</div><div class="item-sub">Rumah Anda belum ditautkan. Hubungi Ketua/Sekretaris RT.</div></div>'
+    : daftarJ.map(j => jKartu(j, daftarJ.length > 1)).join("");
   const iHtml = !i ? '' : i.total_tunggakan > 0 ? `<div class="kas-card due">
         <div class="k-title">Iuran RT — KK ${esc(i.no_kk)}</div>
         <div class="k-sub">Menunggak ${i.jumlah_pertemuan_tunggakan} pertemuan</div>
@@ -677,8 +682,15 @@ const screens = {
       <h2 class="title">KK ${esc(can.seeFullNik(no_kk) ? no_kk : maskNik(no_kk))}</h2>
       <div class="card" style="margin-bottom:12px">
         <div class="row"><span class="label">Rumah</span></div>
-        <div class="value-lg" style="font-size:16px">${esc(kkRec.nama_rumah || 'Belum ditautkan')}</div>
-        ${can.manageRumah() ? `<button class="btn outline sm" style="margin-top:8px" data-ubah-rumah-kk="${esc(no_kk)}">Ubah Rumah</button>` : ''}
+        ${(kkRec.rumah || []).length
+          ? kkRec.rumah.map(r => `<div class="value-lg" style="font-size:16px">${esc(r.nama)} <span class="item-sub">· ${r.jiwa} orang</span></div>`).join("")
+          : '<div class="value-lg" style="font-size:16px">Belum ditautkan</div>'}
+        ${(kkRec.rumah || []).length && kkRec.jiwa_tanpa_rumah ? `<div class="item-sub">${kkRec.jiwa_tanpa_rumah} anggota belum ditautkan ke rumah</div>` : ''}
+        ${(kkRec.rumah || []).length > 1 ? '<div class="mask-note">KK ini tinggal di lebih dari satu rumah.</div>' : ''}
+        <div class="btn-row" style="flex-wrap:wrap">
+          ${can.manageRumah() ? `<button class="btn outline sm" data-ubah-rumah-kk="${esc(no_kk)}">Ubah Rumah (semua anggota)</button>` : ''}
+          ${can.editWarga() ? `<button class="btn outline sm" data-atur-rumah-anggota="${esc(no_kk)}">Atur rumah per anggota</button>` : ''}
+        </div>
       </div>
       ${desilKartuKK(no_kk)}
       <div id="kkAnggotaWrap" class="card"><div class="empty">Memuat anggota…</div></div>
@@ -699,7 +711,7 @@ const screens = {
       <div class="card" style="margin-top:12px; padding:4px 12px">
         ${cache.rumah.length ? cache.rumah.map(r=>`
           <div class="item">
-            <div class="row"><span class="item-title">${esc(r.nama)}</span><span class="item-sub">${r.jumlah_kk} KK</span></div>
+            <div class="row"><span class="item-title">${esc(r.nama)}</span><span class="item-sub">${r.jumlah_kk} KK · ${r.jumlah_jiwa || 0} jiwa</span></div>
             ${r.catatan ? `<div class="item-sub">${esc(r.catatan)}</div>` : ''}
             <div class="item-sub">Jimpitan: ${r.status_jimpitan==='bebas' ? '<b>dibebaskan</b>' : 'aktif'}${r.mulai_jimpitan ? ' · mulai '+fmtTanggal(r.mulai_jimpitan) : ''}</div>
             ${can.pendataan() ? kondisiBlokRumah(r.id) : ''}
@@ -1505,15 +1517,20 @@ function rumahForm(existing) {
   const v = existing || {};
   const rumahNameMap = {}; cache.rumah.forEach(r => { rumahNameMap[String(r.id)] = r.nama; });
   const kkChecklist = cache.kk.map(k => {
-    const linkedHere = v.id && String(k.id_rumah||"") === String(v.id);
-    const linkedElsewhere = k.id_rumah && !linkedHere;
+    const st = v.id ? rumahKKStatus(k, v.id) : "tidak";
+    const terbagi = kkTerbagi(k);
+    // KK yang anggotanya tersebar di beberapa rumah tidak bisa di-centang di sini (akan menimpa rumah anggota lain);
+    // atur lewat detail KK > "Atur rumah per anggota".
+    let ket = "";
+    if (terbagi) ket = st === "sebagian" ? ('sebagian di sini (' + rumahKKJumlah(k, v.id) + '/' + k.jiwa + ') · atur per anggota') : ('terbagi di ' + (k.rumah || []).length + ' rumah · atur per anggota');
+    else if (st !== "penuh" && k.id_rumah) ket = 'tertaut ke ' + (rumahNameMap[String(k.id_rumah)] || 'rumah lain');
     return `
-    <label class="row rumah-kk-row" data-nama="${esc(String(k.kepala||'').toLowerCase())}" style="padding:8px 0; border-bottom:1px solid var(--line,#e3ddd3); cursor:pointer">
-      <span><input type="checkbox" class="rumah-kk-check" value="${esc(k.no_kk)}" ${linkedHere?'checked':''} style="margin-right:8px">${esc(k.kepala)}</span>
-      <span class="item-sub">${linkedElsewhere ? ('tertaut ke ' + esc(rumahNameMap[String(k.id_rumah)] || 'rumah lain')) : ''}</span>
+    <label class="row rumah-kk-row" data-nama="${esc(String(k.kepala||'').toLowerCase())}" style="padding:8px 0; border-bottom:1px solid var(--line,#e3ddd3); cursor:${terbagi ? 'default' : 'pointer'}; ${terbagi ? 'opacity:.7' : ''}">
+      <span><input type="checkbox" class="rumah-kk-check" value="${esc(k.no_kk)}" ${st === 'penuh' ? 'checked' : ''} ${terbagi ? 'disabled' : ''} style="margin-right:8px">${esc(k.kepala)}</span>
+      <span class="item-sub">${esc(ket)}</span>
     </label>`;
   }).join("");
-  const jumlahTerpilih = cache.kk.filter(k => v.id && String(k.id_rumah||"") === String(v.id)).length;
+  const jumlahTerpilih = cache.kk.filter(k => v.id && rumahKKStatus(k, v.id) === "penuh").length;
   return `
     <button class="back" data-back-tab="rumah">‹ Batal</button>
     <h2 class="title">${existing ? "Ubah Rumah" : "Tambah Rumah"}</h2>
@@ -1556,6 +1573,72 @@ function bindRumahKkFilter() {
   document.querySelectorAll(".rumah-kk-check").forEach(c => c.addEventListener("change", updateCount));
 }
 
+/* ====================== Rumah per ANGGOTA (1 KK bisa tinggal di lebih dari satu rumah) ====================== */
+// Rumah disimpan per anggota. Contoh: anak yang sudah berumah sendiri tetap 1 KK dengan orang tuanya, tetapi rumahnya berbeda.
+function rumahKKJumlah(k, idRumah) { return (k.anggota || []).filter(a => String(a.id_rumah || "") === String(idRumah)).length; }
+function rumahKKStatus(k, idRumah) { // "penuh" = semua anggota di rumah ini · "sebagian" · "tidak"
+  const n = rumahKKJumlah(k, idRumah), total = (k.anggota || []).length;
+  return n === 0 ? "tidak" : n === total ? "penuh" : "sebagian";
+}
+function kkTerbagi(k) { return new Set((k.anggota || []).map(a => String(a.id_rumah || ""))).size > 1; }
+function namaRumahKK(k) {
+  const r = k.rumah || [];
+  if (!r.length) return "belum ditautkan";
+  return r.length === 1 ? r[0].nama : r[0].nama + " +" + (r.length - 1) + " rumah lain";
+}
+function rumahAnggotaForm(no_kk) {
+  const kk = cache.kk.find(k => String(k.no_kk) === String(no_kk)) || {};
+  const opsi = sel => cache.rumah.map(r => `<option value="${esc(r.id)}" ${String(sel) === String(r.id) ? "selected" : ""}>${esc(r.nama)}</option>`).join("");
+  const baris = (kk.anggota || []).map(a => `
+    <div class="item">
+      <div class="item-title">${esc(a.nama)} <span class="item-sub">${esc(a.hub || "")}</span></div>
+      <select class="rumah-anggota-sel" data-nik="${esc(a.nik)}" data-asal="${esc(a.id_rumah || "")}" style="margin-top:6px; width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-family:inherit; font-size:13.5px">
+        <option value="">— belum ditautkan —</option>${opsi(a.id_rumah || "")}<option value="__baru__">+ Buat rumah baru…</option>
+      </select>
+    </div>`).join("");
+  return `
+    <button class="back" data-back-kk="${esc(no_kk)}">‹ Batal</button>
+    <h2 class="title">Rumah per anggota</h2>
+    <div class="mask-note" style="margin-top:-4px; margin-bottom:10px">KK ${esc(kk.kepala || no_kk)}. Pilih rumah tempat tiap anggota tinggal. Jimpitan dihitung per rumah, jadi anggota yang sudah berumah sendiri dipilihkan rumahnya masing-masing.</div>
+    <div class="card" style="padding:4px 12px">${baris || '<div class="empty">Belum ada anggota di KK ini.</div>'}</div>
+    <div id="rumahBaruAnggotaWrap" style="display:none">
+      <div class="field"><label>Nama/patokan rumah baru <span class="opt">(dipakai semua anggota yang memilih “Buat rumah baru”)</span></label><input id="fRumahAnggotaBaru" placeholder="Rumah Mas Andi, belakang balai dukuh"></div>
+    </div>
+    <div id="rumahAnggotaErr"></div>
+    <button class="btn block" id="btnSimpanRumahAnggota" data-no-kk="${esc(no_kk)}" style="margin-top:12px">Simpan</button>`;
+}
+function bindRumahAnggota() {
+  const sels = Array.from(document.querySelectorAll(".rumah-anggota-sel"));
+  const wrap = document.getElementById("rumahBaruAnggotaWrap");
+  if (!sels.length || !wrap) return;
+  const upd = () => { wrap.style.display = sels.some(s => s.value === "__baru__") ? "block" : "none"; };
+  sels.forEach(s => s.addEventListener("change", upd));
+}
+async function submitRumahAnggota() {
+  const btn = document.getElementById("btnSimpanRumahAnggota");
+  if (!btn || btn.disabled) return;
+  const no_kk = btn.dataset.noKk;
+  const err = document.getElementById("rumahAnggotaErr");
+  const tampilErr = m => { if (err) err.innerHTML = `<div class="err">${esc(m)}</div>`; };
+  if (err) err.innerHTML = "";
+  const sels = Array.from(document.querySelectorAll(".rumah-anggota-sel"));
+  const penempatan = sels.filter(s => s.value !== (s.dataset.asal || "")).map(s => ({ nik: s.dataset.nik, id_rumah: s.value }));
+  if (!penempatan.length) { tampilErr("Belum ada yang diubah."); return; }
+  const perluBaru = penempatan.some(p => p.id_rumah === "__baru__");
+  const namaBaru = ((document.getElementById("fRumahAnggotaBaru") || {}).value || "").trim();
+  if (perluBaru && !namaBaru) { tampilErr("Isi nama rumah baru terlebih dahulu."); return; }
+  btn.disabled = true; btn.textContent = "Menyimpan…";
+  if (perluBaru) {
+    const rb = await apiPost("addRumah", { nama: namaBaru });
+    if (!rb.ok) { tampilErr(rb.error); btn.disabled = false; btn.textContent = "Simpan"; return; }
+    penempatan.forEach(p => { if (p.id_rumah === "__baru__") p.id_rumah = rb.id; });
+  }
+  const r = await apiPost("setRumahAnggota", { no_kk, penempatan });
+  if (!r.ok) { tampilErr(r.error); btn.disabled = false; btn.textContent = "Simpan"; return; }
+  await refreshWarga();
+  openKK(no_kk);
+}
+
 /* ====================== FORM: Ubah tautan Rumah untuk 1 KK ====================== */
 function rumahPickerFormKK(no_kk) {
   const kkRec = cache.kk.find(k => String(k.no_kk) === String(no_kk)) || {};
@@ -1563,7 +1646,8 @@ function rumahPickerFormKK(no_kk) {
     <button class="back" data-back-kk="${esc(no_kk)}">‹ Batal</button>
     <h2 class="title">Ubah Rumah — KK ${esc(no_kk)}</h2>
     ${formError ? `<div class="err">${esc(formError)}</div>` : ""}
-    ${rumahSelectField(kkRec.id_rumah || "")}
+    ${kkTerbagi(kkRec) ? '<div class="mask-note" style="margin-bottom:10px">Anggota KK ini tinggal di rumah yang berbeda-beda. Menyimpan di sini akan menyamakan SEMUA anggota ke satu rumah. Untuk mengatur satu per satu, kembali lalu pilih "Atur rumah per anggota".</div>' : ''}
+    ${rumahSelectField(kkTerbagi(kkRec) ? "" : (kkRec.id_rumah || ""))}
     <button class="btn block" id="btnSimpanRumahKK" data-no-kk="${esc(no_kk)}">Simpan</button>`;
 }
 
@@ -2342,6 +2426,9 @@ function attachEvents() {
   qa("[data-del-kk]").forEach(b => b.addEventListener("click", () => delKK(b.dataset.delKk)));
   qa("[data-ubah-rumah-kk]").forEach(b => b.addEventListener("click", () => { formError=""; setScreen(rumahPickerFormKK(b.dataset.ubahRumahKk)); attachEvents(); }));
   q("#btnSimpanRumahKK") && q("#btnSimpanRumahKK").addEventListener("click", submitRumahKK);
+  qa("[data-atur-rumah-anggota]").forEach(b => b.addEventListener("click", () => { formError=""; setScreen(rumahAnggotaForm(b.dataset.aturRumahAnggota)); attachEvents(); }));
+  q("#btnSimpanRumahAnggota") && q("#btnSimpanRumahAnggota").addEventListener("click", submitRumahAnggota);
+  bindRumahAnggota();
 
   /* ---- rumah ---- */
   q("#btnTambahRumah") && q("#btnTambahRumah").addEventListener("click", () => { formError=""; setScreen(rumahForm()); attachEvents(); });
@@ -2602,11 +2689,14 @@ async function submitRumah() {
   const rumahId = id || r.id;
   // Tautkan semua KK yang dicentang ke rumah ini.
   for (const no_kk of checkedKK) {
+    const kk = cache.kk.find(k => String(k.no_kk) === String(no_kk));
+    if (id && kk && rumahKKStatus(kk, id) === "penuh") continue; // sudah tertaut seluruhnya, tak perlu ditulis ulang
     await apiPost("setRumahKK", { no_kk, id_rumah: rumahId });
   }
   // Lepas tautan KK yang sebelumnya di rumah ini tapi sekarang dilepas centangnya (saat mengubah rumah).
   if (id) {
-    const toUnlink = cache.kk.filter(k => String(k.id_rumah||"") === String(id) && checkedKK.indexOf(String(k.no_kk)) === -1);
+    // Hanya KK yang SELURUH anggotanya di rumah ini yang dilepas; KK yang tersebar di beberapa rumah tidak disentuh.
+    const toUnlink = cache.kk.filter(k => rumahKKStatus(k, id) === "penuh" && checkedKK.indexOf(String(k.no_kk)) === -1);
     for (const k of toUnlink) {
       await apiPost("setRumahKK", { no_kk: k.no_kk, id_rumah: "" });
     }
